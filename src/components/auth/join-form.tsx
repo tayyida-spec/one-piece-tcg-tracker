@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { signInViaApi } from "@/lib/auth-client";
+import { signInWithRememberMe } from "@/lib/auth-client";
 import { loadRememberMePreference } from "@/lib/auth-remember";
 import { RememberMeField } from "@/components/auth/remember-me-field";
 import { Button } from "@/components/ui/button";
@@ -132,7 +132,7 @@ export function JoinForm() {
 
     try {
       await withTimeout(
-        signInViaApi(email, password, rememberMe),
+        signInWithRememberMe(email, password, rememberMe),
         AUTH_TIMEOUT_MS,
         "Sign-in timed out. Your network may be blocking Supabase — try another connection or disable VPN."
       );
