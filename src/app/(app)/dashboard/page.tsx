@@ -12,9 +12,6 @@ import { MonthlyPlDashboard } from "@/components/monthly-pl-dashboard";
 
 import { PageHeading, SectionHeading } from "@/components/page-heading";
 
-/** Client router cache: faster return visits to dashboard. */
-export const unstable_dynamicStaleTime = 60;
-
 export default async function DashboardPage() {
 
   const { workspaceId } = await requireUser();

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { signInViaApi } from "@/lib/auth-client";
+import { loadRememberMePreference } from "@/lib/auth-remember";
+import { RememberMeField } from "@/components/auth/remember-me-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,9 +30,18 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const pref = loadRememberMePreference();
+    setRememberMe(pref.rememberMe);
+    if (pref.email) {
+      setEmail(pref.email);
+    }
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,24 +49,11 @@ export function LoginForm() {
     setError(null);
 
     try {
-      const supabase = createClient();
-      const { data, error: authError } = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
+      await withTimeout(
+        signInViaApi(email, password, rememberMe),
         SIGN_IN_TIMEOUT_MS,
         "Sign-in timed out. Your network may be blocking Supabase — try another connection or disable VPN."
       );
-
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!data.session) {
-        setError("Sign-in did not create a session. Confirm your email in Supabase, then try again.");
-        setLoading(false);
-        return;
-      }
 
       router.push("/dashboard");
       router.refresh();
@@ -73,6 +71,7 @@ export function LoginForm() {
           id="email"
           type="email"
           required
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -83,10 +82,12 @@ export function LoginForm() {
           id="password"
           type="password"
           required
+          autoComplete={rememberMe ? "current-password" : "off"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
+      <RememberMeField checked={rememberMe} onChange={setRememberMe} />
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Signing in…" : "Sign in"}

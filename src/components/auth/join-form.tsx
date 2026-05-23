@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { signInViaApi } from "@/lib/auth-client";
+import { loadRememberMePreference } from "@/lib/auth-remember";
+import { RememberMeField } from "@/components/auth/remember-me-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +40,7 @@ export function JoinForm() {
   const [inviteCode, setInviteCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,6 +50,14 @@ export function JoinForm() {
       setInviteCode(codeFromUrl);
     }
   }, [codeFromUrl]);
+
+  useEffect(() => {
+    const pref = loadRememberMePreference();
+    setRememberMe(pref.rememberMe);
+    if (pref.email) {
+      setEmail(pref.email);
+    }
+  }, []);
 
   async function joinWorkspace(code: string) {
     const res = await fetch("/api/workspace/join", {
@@ -121,24 +133,11 @@ export function JoinForm() {
     }
 
     try {
-      const supabase = createClient();
-      const { data, error: authError } = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
+      await withTimeout(
+        signInViaApi(email, password, rememberMe),
         AUTH_TIMEOUT_MS,
         "Sign-in timed out. Your network may be blocking Supabase — try another connection or disable VPN."
       );
-
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!data.session) {
-        setError("Sign-in did not create a session. Confirm your email in Supabase, then try again.");
-        setLoading(false);
-        return;
-      }
 
       await joinWorkspace(code);
       router.push("/dashboard");
@@ -256,6 +255,7 @@ export function JoinForm() {
             onChange={setInviteCode}
             readOnly={inviteLocked}
           />
+          <RememberMeField id="join-rememberMe" checked={rememberMe} onChange={setRememberMe} />
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in…" : "Sign in & join"}

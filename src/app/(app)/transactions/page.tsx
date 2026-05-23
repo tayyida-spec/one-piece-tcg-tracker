@@ -14,14 +14,6 @@ import { PageHeading } from "@/components/page-heading";
 
 import { TableSectionSkeleton } from "@/components/table-section-skeleton";
 
-
-
-/** Client router cache: instant when switching back within 60s. */
-
-export const unstable_dynamicStaleTime = 60;
-
-
-
 async function TransactionLogSection() {
 
   const { workspaceId } = await requireUser();
