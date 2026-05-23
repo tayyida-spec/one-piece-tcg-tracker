@@ -5,7 +5,7 @@ Shared inventory and transaction tracker for your group (5 users). Built with **
 ## Features (v1)
 
 - Email login (Supabase Auth)
-- Shared workspace **Three Hats** with invite code
+- Shared workspace **Three Hats** with invite link (no public sign-up page)
 - **Inventory** — cards, sealed, merchandise; JP/EN; variant, condition, location, prices, photo URL
 - **Transactions** — buy / sell / trade / gift / adjustment; auto-updates inventory qty
 - **Quick add** — minimal form for trade-night logging
@@ -43,7 +43,13 @@ Edit `.env` with your Supabase values. Set:
 WORKSPACE_INVITE_CODE=three-hats-2026
 ```
 
-Share this code with your 4 friends (they can use **Join workspace** after sign-up, or sign up directly — new users auto-join the existing workspace when the code matches).
+Share the invite link with your friends (not the code alone):
+
+```
+https://one-piece-tcg-tracker-five.vercel.app/join?code=three-hats-2026
+```
+
+Replace the domain with your Vercel URL if different. Short link `/invite` also works and reads `WORKSPACE_INVITE_CODE` from env.
 
 ### 3. Install and database
 
@@ -57,8 +63,12 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### 4. First user & friends
 
-1. **First person**: Sign up → becomes admin of **Three Hats**.
-2. **Friends**: Sign up (same invite code in env) **or** sign in → **Join workspace** → enter `three-hats-2026` (or your custom code).
+1. **First person**: Open the invite link → **New here** → create account (becomes admin of **Three Hats** if workspace does not exist yet).
+2. **Friends**: Open the same invite link → **New here** to create an account, or **Returning** if they already have one. The invite code is pre-filled from the link.
+
+There is no public sign-up page. `/signup` redirects to the invite join flow.
+
+**Supabase (optional, recommended for production):** In Authentication → Providers → Email, you can leave sign-ups enabled (registration only appears on the invite link page). To block sign-ups outside your app entirely, disable **Enable sign ups** only if you invite users via Supabase dashboard emails instead.
 
 ### 5. Import your Excel
 
@@ -78,7 +88,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```
 src/app/(app)/     # Authenticated pages
-src/app/(auth)/    # Login, signup, join
+src/app/(auth)/    # Login, invite join
 src/app/api/       # REST API routes
 prisma/schema.prisma
 ```

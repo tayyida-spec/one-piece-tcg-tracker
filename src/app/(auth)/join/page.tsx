@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { JoinForm } from "@/components/auth/join-form";
 
@@ -8,14 +9,18 @@ export default function JoinPage() {
         Join Three Hats
       </h1>
       <p className="mt-1 text-sm text-muted">
-        Enter the invite code your group shared (default in README).
+        Use the invite link your group shared. Create an account or sign in, then you&apos;ll join
+        the shared workspace automatically.
       </p>
       <div className="mt-6">
-        <JoinForm />
+        <Suspense fallback={<p className="text-sm text-muted">Loading…</p>}>
+          <JoinForm />
+        </Suspense>
       </div>
       <p className="mt-4 text-center text-sm text-muted">
+        Already joined?{" "}
         <Link href="/login" className="font-medium text-brand underline hover:text-brand-hover">
-          Back to sign in
+          Sign in
         </Link>
       </p>
     </div>

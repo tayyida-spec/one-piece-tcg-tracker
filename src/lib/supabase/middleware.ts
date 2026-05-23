@@ -7,7 +7,8 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup") ||
-    request.nextUrl.pathname.startsWith("/join");
+    request.nextUrl.pathname.startsWith("/join") ||
+    request.nextUrl.pathname.startsWith("/invite");
 
   const isPublic = request.nextUrl.pathname === "/";
 
