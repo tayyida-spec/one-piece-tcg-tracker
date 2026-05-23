@@ -57,6 +57,24 @@ export const transactionLineEditSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
+export const profileUpdateSchema = z.object({
+  displayName: z
+    .string()
+    .max(80)
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim() : null)),
+});
+
+export const passwordChangeSchema = z
+  .object({
+    newPassword: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string().min(6),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 export const transactionSchema = z.object({
   transactionType: z.enum(["buy", "sell", "trade", "gift", "adjustment"]),
   date: z.string().min(1),

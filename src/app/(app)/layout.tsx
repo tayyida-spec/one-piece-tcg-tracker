@@ -1,11 +1,15 @@
 import { redirect } from "next/navigation";
 import { AppNav } from "@/components/app-nav";
 import { AuthError, requireUser } from "@/lib/auth";
+import { resolveUserDisplayName } from "@/lib/user-display";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let membership;
+  let userName = "User";
   try {
-    ({ membership } = await requireUser());
+    const auth = await requireUser();
+    membership = auth.membership;
+    userName = resolveUserDisplayName(auth.user, membership);
   } catch (e) {
     if (e instanceof AuthError) {
       redirect("/login");
@@ -32,7 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-background">
-      <AppNav workspaceName={membership.workspace.name} />
+      <AppNav workspaceName={membership.workspace.name} userName={userName} />
       <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
     </div>
   );
