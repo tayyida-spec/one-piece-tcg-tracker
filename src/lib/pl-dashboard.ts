@@ -48,6 +48,9 @@ export type BatchCategoryPlRow = {
   netCashFlow: number;
   transactionCount: number;
   lineCount: number;
+  /** BC only — sum of open-position unrealized P/L */
+  unrealizedPl?: number;
+  remainingMarketValue?: number;
 };
 
 export type DisplayIdPlRow = {
@@ -60,6 +63,20 @@ export type DisplayIdPlRow = {
   realizedPl: number;
   netCashFlow: number;
   lineCount: number;
+  /** BC only — unsold portion at current market vs buy cost */
+  unrealizedPl?: number;
+  remainingMarketValue?: number;
+  remainingCostBasis?: number;
+  remainingQty?: number;
+  hasMarketPrice?: boolean;
+};
+
+export type PlInventoryInput = {
+  id: string;
+  quantity: number;
+  purchasePrice: number | null;
+  currentMarketPrice: number | null;
+  status: string;
 };
 
 /** Human-readable label beside TXN### / BC### on the dashboard. */
@@ -96,6 +113,9 @@ export type PlDashboardData = {
   totalMarketValue: number;
   totalCostBasis: number;
   inStockCount: number;
+  /** BC batches with unsold cards — market − cost on remaining qty */
+  bcUnrealizedPl: number;
+  bcRemainingMarketValue: number;
 };
 
 export function monthKey(date: string | Date): string {
@@ -121,7 +141,8 @@ export function lineAmount(quantity: number, unitPrice: number): number {
 export function batchPlForDisplayId(
   displayId: string,
   lines: PlLineInput[],
-  allLines: PlLineInput[]
+  allLines: PlLineInput[],
+  inventoryById?: Map<string, PlInventoryInput>
 ): DisplayIdPlRow {
   const groupLines = lines.filter((l) => l.displayId === displayId);
   const cat = batchCategory(displayId);
@@ -149,7 +170,7 @@ export function batchPlForDisplayId(
     }
   }
 
-  return {
+  const base: DisplayIdPlRow = {
     displayId,
     subtitle: deriveBatchSubtitle(displayId, groupLines),
     category: cat,
@@ -159,9 +180,160 @@ export function batchPlForDisplayId(
     netCashFlow: round2(sellTotal - buyTotal),
     lineCount: groupLines.length,
   };
+
+  if (cat === "bc" && inventoryById) {
+    const unrealized = bcUnrealizedForDisplayId(displayId, allLines, inventoryById);
+    return { ...base, ...unrealized };
+  }
+
+  return base;
 }
 
-export function breakdownByDisplayId(lines: PlLineInput[], month?: string): DisplayIdPlRow[] {
+/** Unrealized P/L for a BC### batch — remaining buy qty × (market − cost). */
+export function bcUnrealizedForDisplayId(
+  displayId: string,
+  allLines: PlLineInput[],
+  inventoryById: Map<string, PlInventoryInput>
+): Pick<
+  DisplayIdPlRow,
+  "unrealizedPl" | "remainingMarketValue" | "remainingCostBasis" | "remainingQty" | "hasMarketPrice"
+> {
+  const groupLines = allLines.filter((l) => l.displayId === displayId);
+  if (batchCategory(displayId) !== "bc" || groupLines.length === 0) {
+    return {
+      unrealizedPl: 0,
+      remainingMarketValue: 0,
+      remainingCostBasis: 0,
+      remainingQty: 0,
+      hasMarketPrice: false,
+    };
+  }
+
+  const byIdentity = new Map<string, PlLineInput[]>();
+  for (const line of groupLines) {
+    const key = line.inventoryItemId ?? identityKey(line);
+    const bucket = byIdentity.get(key) ?? [];
+    bucket.push(line);
+    byIdentity.set(key, bucket);
+  }
+
+  let unrealizedPl = 0;
+  let remainingMarketValue = 0;
+  let remainingCostBasis = 0;
+  let remainingQty = 0;
+  let hasMarketPrice = false;
+
+  for (const identityLines of byIdentity.values()) {
+    const snapshot = bcUnrealizedForIdentityGroup(identityLines, inventoryById);
+    unrealizedPl += snapshot.unrealizedPl;
+    remainingMarketValue += snapshot.remainingMarketValue;
+    remainingCostBasis += snapshot.remainingCostBasis;
+    remainingQty += snapshot.remainingQty;
+    hasMarketPrice = hasMarketPrice || snapshot.hasMarketPrice;
+  }
+
+  return {
+    unrealizedPl: round2(unrealizedPl),
+    remainingMarketValue: round2(remainingMarketValue),
+    remainingCostBasis: round2(remainingCostBasis),
+    remainingQty: round2(remainingQty),
+    hasMarketPrice,
+  };
+}
+
+function bcUnrealizedForIdentityGroup(
+  groupLines: PlLineInput[],
+  inventoryById: Map<string, PlInventoryInput>
+): {
+  unrealizedPl: number;
+  remainingMarketValue: number;
+  remainingCostBasis: number;
+  remainingQty: number;
+  hasMarketPrice: boolean;
+} {
+  const buys = groupLines.filter((l) => l.transactionType.toLowerCase() === "buy");
+  const sells = groupLines.filter((l) => l.transactionType.toLowerCase() === "sell");
+
+  const buyQty = buys.reduce((sum, line) => sum + line.quantity, 0);
+  const sellQty = sells.reduce((sum, line) => sum + line.quantity, 0);
+  const openQty = Math.max(0, buyQty - sellQty);
+
+  if (openQty <= 0 || buys.length === 0) {
+    return {
+      unrealizedPl: 0,
+      remainingMarketValue: 0,
+      remainingCostBasis: 0,
+      remainingQty: 0,
+      hasMarketPrice: false,
+    };
+  }
+
+  let totalBuyCost = 0;
+  let totalBuyQty = 0;
+  for (const buy of buys) {
+    totalBuyCost += lineAmount(buy.quantity, buy.unitPrice);
+    totalBuyQty += buy.quantity;
+  }
+
+  const costPerUnit = totalBuyQty > 0 ? totalBuyCost / totalBuyQty : 0;
+  const costBasis = costPerUnit * openQty;
+
+  const inventoryItemId = buys.find((line) => line.inventoryItemId)?.inventoryItemId;
+  const inventory = inventoryItemId ? inventoryById.get(inventoryItemId) : undefined;
+  const marketPerUnit =
+    inventory?.currentMarketPrice != null && inventory.currentMarketPrice > 0
+      ? inventory.currentMarketPrice
+      : null;
+
+  if (marketPerUnit == null) {
+    return {
+      unrealizedPl: 0,
+      remainingMarketValue: 0,
+      remainingCostBasis: round2(costBasis),
+      remainingQty: openQty,
+      hasMarketPrice: false,
+    };
+  }
+
+  const marketValue = marketPerUnit * openQty;
+
+  return {
+    unrealizedPl: round2(marketValue - costBasis),
+    remainingMarketValue: round2(marketValue),
+    remainingCostBasis: round2(costBasis),
+    remainingQty: openQty,
+    hasMarketPrice: true,
+  };
+}
+
+export function sumBcUnrealized(
+  lines: PlLineInput[],
+  inventoryById: Map<string, PlInventoryInput>
+): { bcUnrealizedPl: number; bcRemainingMarketValue: number } {
+  const displayIds = [
+    ...new Set(lines.filter((line) => batchCategory(line.displayId) === "bc").map((line) => line.displayId)),
+  ];
+
+  let bcUnrealizedPl = 0;
+  let bcRemainingMarketValue = 0;
+
+  for (const displayId of displayIds) {
+    const snapshot = bcUnrealizedForDisplayId(displayId, lines, inventoryById);
+    bcUnrealizedPl += snapshot.unrealizedPl ?? 0;
+    bcRemainingMarketValue += snapshot.remainingMarketValue ?? 0;
+  }
+
+  return {
+    bcUnrealizedPl: round2(bcUnrealizedPl),
+    bcRemainingMarketValue: round2(bcRemainingMarketValue),
+  };
+}
+
+export function breakdownByDisplayId(
+  lines: PlLineInput[],
+  month?: string,
+  inventoryById?: Map<string, PlInventoryInput>
+): DisplayIdPlRow[] {
   const filtered = month ? lines.filter((l) => monthKey(l.date) === month) : lines;
   const displayIds = [...new Set(filtered.map((l) => l.displayId))].sort((a, b) => {
     const catA = batchCategory(a);
@@ -171,14 +343,15 @@ export function breakdownByDisplayId(lines: PlLineInput[], month?: string): Disp
     return a.localeCompare(b);
   });
 
-  return displayIds.map((id) => batchPlForDisplayId(id, filtered, lines));
+  return displayIds.map((id) => batchPlForDisplayId(id, filtered, lines, inventoryById));
 }
 
 export function breakdownByBatchCategory(
   lines: PlLineInput[],
-  month?: string
+  month?: string,
+  inventoryById?: Map<string, PlInventoryInput>
 ): BatchCategoryPlRow[] {
-  const byDisplay = breakdownByDisplayId(lines, month);
+  const byDisplay = breakdownByDisplayId(lines, month, inventoryById);
   const categories: TransactionBatchCategory[] = ["txn", "bc", "other"];
 
   return categories
@@ -196,8 +369,16 @@ export function breakdownByBatchCategory(
       const buyTotal = round2(rows.reduce((s, r) => s + r.buyTotal, 0));
       const sellTotal = round2(rows.reduce((s, r) => s + r.sellTotal, 0));
       const realizedPl = round2(rows.reduce((s, r) => s + r.realizedPl, 0));
+      const unrealizedPl =
+        category === "bc"
+          ? round2(rows.reduce((s, r) => s + (r.unrealizedPl ?? 0), 0))
+          : undefined;
+      const remainingMarketValue =
+        category === "bc"
+          ? round2(rows.reduce((s, r) => s + (r.remainingMarketValue ?? 0), 0))
+          : undefined;
 
-      return {
+      const row: BatchCategoryPlRow = {
         category,
         label: meta.label,
         description: meta.description,
@@ -208,6 +389,13 @@ export function breakdownByBatchCategory(
         transactionCount: transactionCount || rows.length,
         lineCount: rows.reduce((s, r) => s + r.lineCount, 0),
       };
+
+      if (category === "bc") {
+        row.unrealizedPl = unrealizedPl;
+        row.remainingMarketValue = remainingMarketValue;
+      }
+
+      return row;
     })
     .filter((r): r is BatchCategoryPlRow => r != null);
 }
@@ -287,8 +475,9 @@ export function realizedPlForSellLine(line: PlLineInput, allLines: PlLineInput[]
 
 export function buildPlDashboard(
   lines: PlLineInput[],
-  inventory: { quantity: number; purchasePrice: number | null; currentMarketPrice: number | null; status: string }[]
+  inventory: PlInventoryInput[]
 ): PlDashboardData {
+  const inventoryById = new Map(inventory.map((item) => [item.id, item]));
   const monthMap = new Map<
     string,
     { buyTotal: number; sellTotal: number; buyCount: number; sellCount: number }
@@ -348,12 +537,16 @@ export function buildPlDashboard(
     totalCost += qty * Number(item.purchasePrice ?? 0);
   }
 
+  const { bcUnrealizedPl, bcRemainingMarketValue } = sumBcUnrealized(lines, inventoryById);
+
   return {
     months,
     unrealizedPl: round2(totalMarket - totalCost),
     totalMarketValue: round2(totalMarket),
     totalCostBasis: round2(totalCost),
     inStockCount,
+    bcUnrealizedPl,
+    bcRemainingMarketValue,
   };
 }
 

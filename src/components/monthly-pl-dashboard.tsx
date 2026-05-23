@@ -8,6 +8,7 @@ import {
   type DisplayIdPlRow,
   type MonthlyPlRow,
   type PlDashboardData,
+  type PlInventoryInput,
   type PlLineInput,
 } from "@/lib/pl-dashboard";
 import { formatDisplayIdLabel } from "@/lib/pl-dashboard";
@@ -20,6 +21,7 @@ import { Select } from "@/components/ui/select";
 type Props = {
   data: PlDashboardData;
   lines: PlLineInput[];
+  inventory: PlInventoryInput[];
 };
 
 function PlValue({
@@ -45,10 +47,15 @@ function PlValue({
   );
 }
 
-export function MonthlyPlDashboard({ data, lines }: Props) {
+export function MonthlyPlDashboard({ data, lines, inventory }: Props) {
   const defaultMonth = data.months[0]?.month ?? "";
   const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
   const [scope, setScope] = useState<"all" | "month">("all");
+
+  const inventoryById = useMemo(
+    () => new Map(inventory.map((item) => [item.id, item])),
+    [inventory]
+  );
 
   const selected = useMemo(
     () => data.months.find((m) => m.month === selectedMonth),
@@ -58,13 +65,13 @@ export function MonthlyPlDashboard({ data, lines }: Props) {
   const monthFilter = scope === "month" && selectedMonth ? selectedMonth : undefined;
 
   const batchCategories = useMemo(
-    () => breakdownByBatchCategory(lines, monthFilter),
-    [lines, monthFilter]
+    () => breakdownByBatchCategory(lines, monthFilter, inventoryById),
+    [lines, monthFilter, inventoryById]
   );
 
   const byDisplayId = useMemo(
-    () => breakdownByDisplayId(lines, monthFilter),
-    [lines, monthFilter]
+    () => breakdownByDisplayId(lines, monthFilter, inventoryById),
+    [lines, monthFilter, inventoryById]
   );
 
   const txnRows = useMemo(() => byDisplayId.filter((r) => r.category === "txn"), [byDisplayId]);
@@ -88,7 +95,7 @@ export function MonthlyPlDashboard({ data, lines }: Props) {
         <div className="mb-3">
           <SectionHeading title="Portfolio snapshot" />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <SnapshotCard
             label="Est. market value"
             value={formatMoney(data.totalMarketValue)}
@@ -103,6 +110,11 @@ export function MonthlyPlDashboard({ data, lines }: Props) {
             label="Unrealized P/L"
             value={<PlValue value={data.unrealizedPl} />}
             hint="Market − cost on in-stock"
+          />
+          <SnapshotCard
+            label="BC unrealized P/L"
+            value={<PlValue value={data.bcUnrealizedPl} />}
+            hint={`${formatMoney(data.bcRemainingMarketValue)} est. market on unsold BC cards`}
           />
           <SnapshotCard
             label="All-time realized P/L"
@@ -181,8 +193,9 @@ export function MonthlyPlDashboard({ data, lines }: Props) {
               <DisplayIdTable
                 category="bc"
                 title="BC — buy / sell cards"
-                hint="P/L = sales − purchases for that BC### (buy and sell rows share the same ID)"
+                hint="Realized P/L = sales − purchases · Unrealized = unsold qty × (market − buy cost)"
                 rows={bcRows}
+                showUnrealized
               />
             )}
           </div>
@@ -283,6 +296,14 @@ function BatchCategoryCard({ row }: { row: BatchCategoryPlRow }) {
             <PlValue value={row.realizedPl} />
           </p>
         </div>
+        {row.category === "bc" && row.unrealizedPl != null ? (
+          <div className="col-span-2">
+            <p className="text-xs text-muted">Unrealized P/L (open)</p>
+            <p className="font-semibold tabular-nums">
+              <PlValue value={row.unrealizedPl} />
+            </p>
+          </div>
+        ) : null}
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
         {row.lineCount} lines · Net cash <PlValue value={row.netCashFlow} className="text-xs" />
@@ -296,11 +317,13 @@ function DisplayIdTable({
   title,
   hint,
   rows,
+  showUnrealized = false,
 }: {
   category: TransactionBatchCategory;
   title: string;
   hint: string;
   rows: DisplayIdPlRow[];
+  showUnrealized?: boolean;
 }) {
   return (
     <div
@@ -324,7 +347,10 @@ function DisplayIdTable({
             <th className="px-4 py-2">Transaction ID</th>
             <th className="px-4 py-2 text-right">Purchases</th>
             <th className="px-4 py-2 text-right">Sales</th>
-            <th className="px-4 py-2 text-right">P/L</th>
+            <th className="px-4 py-2 text-right">Realized P/L</th>
+            {showUnrealized ? (
+              <th className="px-4 py-2 text-right">Unrealized P/L</th>
+            ) : null}
             <th className="px-4 py-2 text-right">Net cash</th>
           </tr>
         </thead>
@@ -339,6 +365,11 @@ function DisplayIdTable({
               <td className="px-4 py-2 text-right tabular-nums">
                 <PlValue value={r.realizedPl} />
               </td>
+              {showUnrealized ? (
+                <td className="px-4 py-2 text-right tabular-nums">
+                  <UnrealizedCell row={r} />
+                </td>
+              ) : null}
               <td className="px-4 py-2 text-right tabular-nums">
                 <PlValue value={r.netCashFlow} />
               </td>
@@ -348,6 +379,22 @@ function DisplayIdTable({
       </table>
     </div>
   );
+}
+
+function UnrealizedCell({ row }: { row: DisplayIdPlRow }) {
+  if (!row.remainingQty || row.remainingQty <= 0) {
+    return <span className="text-muted">—</span>;
+  }
+
+  if (!row.hasMarketPrice) {
+    return (
+      <span className="text-muted" title="Set current market price in Inventory">
+        —
+      </span>
+    );
+  }
+
+  return <PlValue value={row.unrealizedPl ?? 0} />;
 }
 
 function MonthSummaryCards({ row }: { row: MonthlyPlRow }) {

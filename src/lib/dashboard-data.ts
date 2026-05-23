@@ -4,6 +4,7 @@ import {
   buildPlDashboard,
   type PlLineInput,
   type PlDashboardData,
+  type PlInventoryInput,
 } from "@/lib/pl-dashboard";
 import { dashboardCacheTag } from "@/lib/cache-tags";
 
@@ -13,6 +14,7 @@ export type DashboardPayload = {
   inStockCount: number;
   plData: PlDashboardData;
   plLines: PlLineInput[];
+  inventorySnapshot: PlInventoryInput[];
   recentTransactions: {
     id: string;
     displayId: string;
@@ -44,6 +46,7 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
       prisma.inventoryItem.findMany({
         where: { workspaceId, status: "in_stock" },
         select: {
+          id: true,
           quantity: true,
           purchasePrice: true,
           currentMarketPrice: true,
@@ -75,16 +78,16 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
         : null,
   }));
 
-  const plData = buildPlDashboard(
-    plLines,
-    inStockItems.map((i) => ({
-      quantity: Number(i.quantity),
-      purchasePrice: i.purchasePrice != null ? Number(i.purchasePrice) : null,
-      currentMarketPrice:
-        i.currentMarketPrice != null ? Number(i.currentMarketPrice) : null,
-      status: i.status,
-    }))
-  );
+  const inventorySnapshot: PlInventoryInput[] = inStockItems.map((i) => ({
+    id: i.id,
+    quantity: Number(i.quantity),
+    purchasePrice: i.purchasePrice != null ? Number(i.purchasePrice) : null,
+    currentMarketPrice:
+      i.currentMarketPrice != null ? Number(i.currentMarketPrice) : null,
+    status: i.status,
+  }));
+
+  const plData = buildPlDashboard(plLines, inventorySnapshot);
 
   return {
     transactionCount,
@@ -92,6 +95,7 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
     inStockCount: plData.inStockCount,
     plData,
     plLines,
+    inventorySnapshot,
     recentTransactions: recentTransactions.map((t) => ({
       id: t.id,
       displayId: t.displayId,

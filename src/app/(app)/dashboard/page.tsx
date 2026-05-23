@@ -31,6 +31,8 @@ export default async function DashboardPage() {
 
     plLines,
 
+    inventorySnapshot,
+
     recentTransactions,
 
   } = await getCachedDashboardPayload(workspaceId);
@@ -83,7 +85,7 @@ export default async function DashboardPage() {
 
 
 
-      <MonthlyPlDashboard data={plData} lines={plLines} />
+      <MonthlyPlDashboard data={plData} lines={plLines} inventory={inventorySnapshot} />
 
 
 
