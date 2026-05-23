@@ -1,0 +1,77 @@
+---
+description: UI/UX standards for responsive, accessible, mobile-first interfaces
+globs: src/**/*.{tsx,css}
+alwaysApply: false
+---
+
+# UI/UX Standards
+
+Apply industry-standard UI/UX when building or changing UI in this project (Three Hats — Next.js, Tailwind, light theme).
+
+## Visual design
+
+- Establish clear visual hierarchy; use typography for emphasis and readability.
+- Maintain WCAG 2.1 AA contrast for text and controls.
+- Use a cohesive palette; align with existing slate/white Tailwind tokens unless the user provides brand guidelines.
+- Keep terminology and component patterns consistent across Inventory, Transactions, Dashboard, and forms.
+
+## Layout & responsiveness
+
+- **Mobile-first**: design for small screens, then enhance at breakpoints.
+- Prefer **Flexbox** and **CSS Grid** with relative units (`rem`, `%`, `em`) over fixed `px` widths.
+- Use breakpoints for layout shifts; prioritize essential content on narrow viewports.
+- Progressive disclosure and off-canvas patterns for secondary content on small screens.
+- Tables: horizontal scroll when needed; avoid clipping filter inputs or actions.
+
+## Touch & interaction
+
+- Touch targets **≥ 44×44px**; adequate spacing between controls.
+- Hover states on desktop; visible **focus** states for keyboard and touch.
+- Familiar patterns (links, buttons, form fields) to reduce cognitive load.
+- Clear CTAs; intuitive nav (consider sticky header for primary nav on scroll).
+- Keyboard-accessible nav and interactive elements; test tab order.
+
+## Forms
+
+- Inline validation and specific, actionable error messages.
+- Correct `input` types (`email`, `date`, `number`, `tel`) for mobile keyboards.
+- Layouts that stack on mobile and use space efficiently on desktop.
+- Group related fields; label every control (`htmlFor` / `aria-labelledby`).
+
+## Typography & media
+
+- Modular type scale; `rem` for font sizes; adjust line-height/letter-spacing on small screens.
+- Responsive images: `srcset`/`sizes` where applicable; lazy-load below-the-fold media.
+- Responsive embeds (CSS aspect-ratio or wrapper).
+
+## Performance
+
+- Lazy-load non-critical images and routes where appropriate.
+- Prefer CSS transitions over JS for simple motion; animate judiciously.
+- Loading indicators for async actions (import, save, fetch).
+- Optimize assets; monitor **LCP**, **INP/FID**, **CLS** (Core Web Vitals).
+
+## Accessibility
+
+- Semantic HTML (`nav`, `main`, `button`, `table`, `th` scope).
+- `alt` text for meaningful images; decorative images use `alt=""`.
+- Test with keyboard only and at least one screen reader pattern.
+- Follow WCAG 2.1 AA for new UI work.
+
+## Feedback & IA
+
+- Confirm success/error after user actions; offer recovery paths on errors.
+- Logical IA: clear nav labels, predictable page structure (Dashboard → Inventory / Transactions / Quick add).
+- Search/filter affordances should match user mental models (e.g. Transaction ID, card ID).
+
+## Testing (before shipping UI changes)
+
+- Test in browser DevTools across breakpoints **and** on a real phone when possible.
+- Verify forms, tables, and nav on mobile portrait and desktop.
+- Check focus rings, contrast, and touch target size on changed screens.
+
+## Project-specific
+
+- Trade-night flows (**Quick add**, compact forms) must work one-handed on mobile.
+- Dense data tables (Inventory, Transactions): keep column filters usable on small screens.
+- Currency display: **SGD** formatting via existing `formatMoney` utilities.

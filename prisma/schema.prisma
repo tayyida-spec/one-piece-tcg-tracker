@@ -1,0 +1,123 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Workspace {
+  id           String            @id @default(cuid())
+  name           String            @default("Three Hats")
+  inviteCode     String            @unique
+  createdAt      DateTime          @default(now())
+  members        WorkspaceMember[]
+  inventoryItems InventoryItem[]
+  transactions   Transaction[]
+  cardCatalog    CardCatalogEntry[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String    @default("member")
+  displayName String?
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model InventoryItem {
+  id                 String            @id @default(cuid())
+  workspaceId        String
+  itemType           String            @default("card")
+  cardName           String
+  cardId             String
+  series             String            @default("")
+  rarity             String            @default("")
+  language           String            @default("JP")
+  variant            String            @default("")
+  condition          String?
+  quantity           Decimal           @default(0) @db.Decimal(12, 2)
+  location           String?
+  purchasePrice      Decimal?          @db.Decimal(12, 2)
+  currentMarketPrice Decimal?          @db.Decimal(12, 2)
+  owner              String?
+  notes              String?
+  photoUrl           String?
+  status             String            @default("in_stock")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  workspace          Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  transactionLines   TransactionLine[]
+
+  @@unique([workspaceId, itemType, cardId, series, rarity, variant, language])
+  @@index([workspaceId, cardId])
+  @@index([workspaceId, status])
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  workspaceId     String
+  displayId       String
+  importKey       String
+  batchLabel      String?
+  transactionType String
+  date            DateTime
+  currency        String            @default("SGD")
+  smartpacFee     Decimal?          @db.Decimal(12, 2)
+  notes           String?
+  createdBy       String?
+  createdAt       DateTime          @default(now())
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  lines           TransactionLine[]
+
+  @@unique([workspaceId, importKey])
+  @@index([workspaceId, displayId])
+  @@index([workspaceId, date])
+}
+
+model TransactionLine {
+  id              String         @id @default(cuid())
+  transactionId   String
+  inventoryItemId String?
+  itemType        String         @default("card")
+  cardName        String
+  cardId          String
+  series          String         @default("")
+  rarity          String         @default("")
+  language        String         @default("JP")
+  variant         String         @default("")
+  quantity        Decimal        @db.Decimal(12, 2)
+  unitPrice       Decimal        @db.Decimal(12, 2)
+  smartpacFee     Decimal?       @db.Decimal(12, 2)
+  owner           String?
+  reimbursement   String?
+  platform        String?
+  notes           String?
+  transaction     Transaction    @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+
+  @@index([transactionId])
+  @@index([inventoryItemId])
+}
+
+model CardCatalogEntry {
+  id          String    @id @default(cuid())
+  workspaceId String
+  cardName    String
+  cardId      String
+  series      String?
+  rarity      String?
+  cardType    String?
+  imageUrl    String?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, cardId, series, rarity])
+  @@index([workspaceId, cardName])
+}
