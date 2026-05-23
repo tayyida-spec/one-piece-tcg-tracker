@@ -76,7 +76,12 @@ export function AppNav({
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
             {links.map((link) => (
-              <Link key={link.href} href={link.href} className={linkClass(link.href)}>
+              <Link
+                key={link.href}
+                href={link.href}
+                prefetch={true}
+                className={linkClass(link.href)}
+              >
                 {link.label}
               </Link>
             ))}
@@ -130,7 +135,7 @@ export function AppNav({
             <ul className="space-y-1">
               {links.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className={linkClass(link.href)}>
+                  <Link href={link.href} prefetch={true} className={linkClass(link.href)}>
                     {link.label}
                   </Link>
                 </li>
