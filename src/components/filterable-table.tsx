@@ -97,7 +97,7 @@ export function FilterableTable<T extends { id: string }>({
                   {columns.map((col, i) => (
                     <td
                       key={`${row.id}-${i}-${col.header}`}
-                      className={cn("px-3 py-2 align-top text-foreground", col.cellClassName)}
+                      className={cn("px-3 py-2 align-middle text-foreground", col.cellClassName)}
                     >
                       {col.render(row)}
                     </td>

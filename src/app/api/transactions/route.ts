@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidateWorkspaceDashboard } from "@/lib/cache-tags";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { transactionSchema } from "@/lib/validations";
+import { quickAddTransactionSchema, transactionSchema } from "@/lib/validations";
 import { createTransaction } from "@/lib/transaction-service";
 
 export async function GET(request: Request) {
@@ -54,7 +54,10 @@ export async function POST(request: Request) {
   try {
     const { workspaceId, user } = await requireUser();
     const body = await request.json();
-    const parsed = transactionSchema.safeParse(body);
+    const parsed = (body?.quickAdd === true
+      ? quickAddTransactionSchema
+      : transactionSchema
+    ).safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

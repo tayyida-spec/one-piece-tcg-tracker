@@ -70,8 +70,12 @@ export function TransactionLogTable({ rows }: { rows: TransactionLogRow[] }) {
     {
       header: "Card/Item Name",
       accessor: (r) => r.cardName,
-      render: (r) => r.cardName,
-      cellClassName: "min-w-[140px]",
+      render: (r) => (
+        <span className="line-clamp-2 block max-w-[200px] break-words" title={r.cardName}>
+          {r.cardName}
+        </span>
+      ),
+      cellClassName: "min-w-[140px] max-w-[200px]",
     },
     {
       header: "Card/Item ID",
@@ -129,7 +133,15 @@ export function TransactionLogTable({ rows }: { rows: TransactionLogRow[] }) {
     {
       header: "Reimbursement",
       accessor: (r) => r.reimbursement ?? "",
-      render: (r) => r.reimbursement || "",
+      render: (r) =>
+        r.reimbursement ? (
+          <span className="line-clamp-2 block max-w-[160px] break-words" title={r.reimbursement}>
+            {r.reimbursement}
+          </span>
+        ) : (
+          ""
+        ),
+      cellClassName: "max-w-[160px]",
     },
     {
       header: "Platform",
@@ -139,8 +151,15 @@ export function TransactionLogTable({ rows }: { rows: TransactionLogRow[] }) {
     {
       header: "Notes",
       accessor: (r) => r.notes ?? "",
-      render: (r) => r.notes || "",
-      cellClassName: "min-w-[160px] max-w-[280px]",
+      render: (r) =>
+        r.notes ? (
+          <span className="line-clamp-2 block max-w-[240px] break-words" title={r.notes}>
+            {r.notes}
+          </span>
+        ) : (
+          ""
+        ),
+      cellClassName: "min-w-[120px] max-w-[240px]",
     },
     {
       header: "",

@@ -23,7 +23,10 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
 
     const fd = new FormData(e.currentTarget);
     const displayId = (fd.get("displayId") as string)?.trim();
+    const str = (name: string) => (fd.get(name) as string | null)?.trim() ?? "";
+
     const body = {
+      ...(compact ? { quickAdd: true } : {}),
       transactionType: fd.get("transactionType"),
       date: fd.get("date"),
       ...(displayId ? { displayId } : {}),
@@ -33,16 +36,16 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
       lines: [
         {
           itemType: fd.get("itemType"),
-          cardName: fd.get("cardName"),
-          cardId: fd.get("cardId"),
-          series: fd.get("series"),
-          rarity: fd.get("rarity"),
+          cardName: str("cardName"),
+          cardId: str("cardId"),
+          series: str("series"),
+          rarity: str("rarity"),
           language: fd.get("language"),
-          variant: fd.get("variant"),
+          variant: str("variant"),
           quantity: fd.get("quantity"),
           unitPrice: fd.get("unitPrice"),
-          owner: fd.get("owner") || null,
-          notes: fd.get("lineNotes") || null,
+          owner: str("owner") || null,
+          notes: compact ? str("lineNotes") || null : null,
         },
       ],
     };
@@ -144,7 +147,12 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="cardId">Card ID</Label>
-        <Input id="cardId" name="cardId" required placeholder="OP11-118" />
+        <Input
+          id="cardId"
+          name="cardId"
+          required={!compact}
+          placeholder="OP11-118"
+        />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -174,7 +182,7 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="owner">Owner</Label>
-          <Input id="owner" name="owner" placeholder="Optional" />
+          <Input id="owner" name="owner" />
         </div>
       </div>
 

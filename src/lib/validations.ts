@@ -75,6 +75,24 @@ export const passwordChangeSchema = z
     path: ["confirmPassword"],
   });
 
+/** Quick add: card id / series / rarity / variant / owner / notes can be filled in later via Edit. */
+export const transactionLineQuickAddSchema = transactionLineSchema.extend({
+  cardId: z.string().default(""),
+  series: z.string().default(""),
+  rarity: z.string().default(""),
+  variant: z.string().default(""),
+});
+
+export const quickAddTransactionSchema = z.object({
+  transactionType: z.enum(["buy", "sell", "trade", "gift", "adjustment"]),
+  date: z.string().min(1),
+  displayId: z.string().min(1).optional(),
+  batchLabel: z.string().optional().nullable(),
+  smartpacFee: z.coerce.number().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  lines: z.array(transactionLineQuickAddSchema).min(1),
+});
+
 export const transactionSchema = z.object({
   transactionType: z.enum(["buy", "sell", "trade", "gift", "adjustment"]),
   date: z.string().min(1),
