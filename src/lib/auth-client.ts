@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { persistRememberMePreference } from "@/lib/auth-remember";
 
-async function syncSessionCookies(rememberMe: boolean): Promise<void> {
+async function syncSessionCookies(rememberMe: boolean): Promise<boolean> {
   const res = await fetch("/api/auth/sync-session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -9,10 +9,7 @@ async function syncSessionCookies(rememberMe: boolean): Promise<void> {
     body: JSON.stringify({ rememberMe }),
   });
 
-  if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? "Could not finalize session");
-  }
+  return res.ok;
 }
 
 /** Browser sign-in (works on localhost/VPN) + server cookie sync for Remember me. */
@@ -34,10 +31,15 @@ export async function signInWithRememberMe(
     );
   }
 
-  try {
-    await syncSessionCookies(rememberMe);
-  } catch {
-    // Browser client already created a session; cookie duration may fall back to Supabase defaults.
+  // Give the browser a moment to attach auth cookies before sync (esp. chunked cookies).
+  let synced = await syncSessionCookies(rememberMe);
+  if (!synced) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    synced = await syncSessionCookies(rememberMe);
+  }
+
+  if (!synced) {
+    // Supabase browser client already set session cookies; Remember me duration may use defaults.
   }
 
   persistRememberMePreference(rememberMe, email);

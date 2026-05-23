@@ -37,6 +37,7 @@ export function rememberMeCookieOptions(rememberMe: boolean): CookieOptions {
   const base: CookieOptions = {
     path: "/",
     sameSite: "lax",
+    httpOnly: false,
     secure: process.env.NODE_ENV === "production",
   };
 

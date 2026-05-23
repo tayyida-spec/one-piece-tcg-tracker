@@ -1,5 +1,6 @@
 ﻿import type { NextRequest } from "next/server";
 import type { User } from "@supabase/supabase-js";
+import { getSupabaseAuthStorageKey } from "@/lib/auth-cookies";
 
 const BASE64_PREFIX = "base64-";
 /** Same margin Supabase uses before treating access tokens as expired. */
@@ -13,12 +14,7 @@ type StoredSession = {
 };
 
 function supabaseAuthStorageKey(): string {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!url) {
-    return "sb-auth-token";
-  }
-  const projectRef = new URL(url).hostname.split(".")[0];
-  return `sb-${projectRef}-auth-token`;
+  return getSupabaseAuthStorageKey();
 }
 
 function decodeBase64Url(value: string): string {

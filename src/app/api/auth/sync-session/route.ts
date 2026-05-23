@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import {
   getSupabaseAuthStorageKey,
   isSupabaseAuthCookie,
-  parseCookieHeader,
   rememberMeCookieOptions,
 } from "@/lib/auth-cookies";
+
+export const dynamic = "force-dynamic";
 
 const syncSchema = z.object({
   rememberMe: z.boolean().optional().default(true),
@@ -23,9 +25,10 @@ export async function POST(request: Request) {
 
     const { rememberMe } = parsed.data;
     const storageKey = getSupabaseAuthStorageKey();
-    const header = request.headers.get("cookie") ?? "";
-    const cookies = parseCookieHeader(header);
-    const authCookies = cookies.filter(({ name }) => isSupabaseAuthCookie(name, storageKey));
+    const cookieStore = await cookies();
+    const authCookies = cookieStore
+      .getAll()
+      .filter(({ name }) => isSupabaseAuthCookie(name, storageKey));
 
     if (authCookies.length === 0) {
       return NextResponse.json(
