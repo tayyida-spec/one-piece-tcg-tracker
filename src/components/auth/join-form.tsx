@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { signInViaApi } from "@/lib/auth-client";
 import { loadRememberMePreference } from "@/lib/auth-remember";
@@ -32,7 +32,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 }
 
 export function JoinForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const codeFromUrl = searchParams.get("code")?.trim() ?? "";
 
@@ -112,8 +111,7 @@ export function JoinForm() {
       }
 
       await joinWorkspace(code);
-      router.push("/dashboard");
-      router.refresh();
+      window.location.assign("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create account");
       setLoading(false);
@@ -140,8 +138,7 @@ export function JoinForm() {
       );
 
       await joinWorkspace(code);
-      router.push("/dashboard");
-      router.refresh();
+      window.location.assign("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not sign in");
       setLoading(false);

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { signInViaApi } from "@/lib/auth-client";
 import { loadRememberMePreference } from "@/lib/auth-remember";
 import { RememberMeField } from "@/components/auth/remember-me-field";
@@ -28,7 +27,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promi
 }
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [password, setPassword] = useState("");
@@ -55,8 +53,7 @@ export function LoginForm() {
         "Sign-in timed out. Your network may be blocking Supabase — try another connection or disable VPN."
       );
 
-      router.push("/dashboard");
-      router.refresh();
+      window.location.assign("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed. Please try again.");
       setLoading(false);
