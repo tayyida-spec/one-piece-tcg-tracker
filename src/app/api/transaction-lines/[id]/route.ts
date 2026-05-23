@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateWorkspaceDashboard } from "@/lib/cache-tags";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { transactionLineEditSchema } from "@/lib/validations";
@@ -78,6 +79,7 @@ export async function PATCH(
       include: { transaction: true },
     });
 
+    revalidateWorkspaceDashboard(workspaceId);
     return NextResponse.json(line);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Update failed";
@@ -108,6 +110,7 @@ export async function DELETE(
       await prisma.transaction.delete({ where: { id: existing.transactionId } });
     }
 
+    revalidateWorkspaceDashboard(workspaceId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Delete failed";

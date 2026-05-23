@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateWorkspaceDashboard } from "@/lib/cache-tags";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { transactionSchema } from "@/lib/validations";
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
     }
 
     const transaction = await createTransaction(workspaceId, user.id, parsed.data);
+    revalidateWorkspaceDashboard(workspaceId);
     return NextResponse.json(transaction, { status: 201 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error";

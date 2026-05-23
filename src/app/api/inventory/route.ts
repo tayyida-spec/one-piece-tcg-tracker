@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateWorkspaceDashboard } from "@/lib/cache-tags";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { inventoryItemSchema } from "@/lib/validations";
@@ -90,6 +91,7 @@ export async function POST(request: Request) {
       },
     });
 
+    revalidateWorkspaceDashboard(workspaceId);
     return NextResponse.json(item, { status: 201 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error";

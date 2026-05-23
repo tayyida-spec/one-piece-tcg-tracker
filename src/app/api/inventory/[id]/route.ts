@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateWorkspaceDashboard } from "@/lib/cache-tags";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { inventoryItemSchema } from "@/lib/validations";
@@ -50,6 +51,7 @@ export async function PATCH(
       },
     });
 
+    revalidateWorkspaceDashboard(workspaceId);
     return NextResponse.json(item);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error";
@@ -70,6 +72,7 @@ export async function DELETE(
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     await prisma.inventoryItem.delete({ where: { id } });
+    revalidateWorkspaceDashboard(workspaceId);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

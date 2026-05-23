@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getSessionUser } from "@/lib/supabase/session";
 import { ensureWorkspaceForUser } from "@/lib/workspace";
 
@@ -8,7 +9,7 @@ export class AuthError extends Error {
   }
 }
 
-export async function requireUser() {
+export const requireUser = cache(async function requireUser() {
   const user = await getSessionUser();
 
   if (!user) {
@@ -21,4 +22,4 @@ export async function requireUser() {
   );
 
   return { user, membership, workspaceId: membership.workspaceId };
-}
+});

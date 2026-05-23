@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateWorkspaceDashboard } from "@/lib/cache-tags";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -203,6 +204,8 @@ export async function POST(request: Request) {
     const lineCount = await prisma.transactionLine.count({
       where: { transaction: { workspaceId } },
     });
+
+    revalidateWorkspaceDashboard(workspaceId);
 
     return NextResponse.json({
       inventoryImported,

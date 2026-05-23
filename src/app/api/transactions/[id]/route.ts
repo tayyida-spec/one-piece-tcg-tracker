@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateWorkspaceDashboard } from "@/lib/cache-tags";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -63,6 +64,7 @@ export async function DELETE(
       await tx.transaction.delete({ where: { id } });
     });
 
+    revalidateWorkspaceDashboard(workspaceId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error";
