@@ -54,12 +54,26 @@ function readAuthSessionJson(cookies: CookieLike[], storageKey: string): string 
   return combined;
 }
 
+function readUserFromUserCookie(cookies: CookieLike[], storageKey: string): User | null {
+  const raw = readAuthSessionJson(cookies, `${storageKey}-user`);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as { user?: User };
+    return parsed.user ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Cookie-only session read (no Supabase network / token refresh). */
 export function getUserFromCookieList(cookies: CookieLike[]): User | null {
   const storageKey = supabaseAuthStorageKey();
   const raw = readAuthSessionJson(cookies, storageKey);
   if (!raw) {
-    return null;
+    return readUserFromUserCookie(cookies, storageKey);
   }
 
   let session: StoredSession;
@@ -69,7 +83,8 @@ export function getUserFromCookieList(cookies: CookieLike[]): User | null {
     return null;
   }
 
-  if (!session.user) {
+  const user = session.user ?? readUserFromUserCookie(cookies, storageKey);
+  if (!user) {
     return null;
   }
 
@@ -78,7 +93,7 @@ export function getUserFromCookieList(cookies: CookieLike[]): User | null {
     return null;
   }
 
-  return session.user;
+  return user;
 }
 
 export function getUserFromRequestCookies(request: NextRequest): User | null {
