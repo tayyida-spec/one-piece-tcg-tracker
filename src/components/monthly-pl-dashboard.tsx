@@ -18,7 +18,10 @@ import { cn, formatMoney } from "@/lib/utils";
 import type { TransactionBatchCategory } from "@/lib/transaction-codes";
 import { Select } from "@/components/ui/select";
 import {
+  DEFAULT_DASHBOARD_ORDER,
+  orderForPlSections,
   resolveVisibleSections,
+  type DashboardSectionKey,
   type DashboardVisibility,
 } from "@/lib/dashboard-sections";
 
@@ -27,6 +30,8 @@ type Props = {
   lines: PlLineInput[];
   inventory: PlInventoryInput[];
   visible?: DashboardVisibility;
+  /** Order of bc / snapshot / txn / monthly within the dashboard. */
+  sectionOrder?: DashboardSectionKey[];
 };
 
 function PlValue({ value, className }: { value: number; className?: string }) {
@@ -60,8 +65,11 @@ function PctValue({ value }: { value: number | null | undefined }) {
   );
 }
 
-export function MonthlyPlDashboard({ data, lines, inventory, visible }: Props) {
+export function MonthlyPlDashboard({ data, lines, inventory, visible, sectionOrder }: Props) {
   const vis = visible ?? resolveVisibleSections(null);
+  const plOrder =
+    sectionOrder ??
+    orderForPlSections(DEFAULT_DASHBOARD_ORDER);
   const defaultMonth = data.months[0]?.month ?? "";
   const [selectedMonth, setSelectedMonth] = useState(defaultMonth);
   const [scope, setScope] = useState<"all" | "month">("all");
@@ -136,169 +144,181 @@ export function MonthlyPlDashboard({ data, lines, inventory, visible }: Props) {
     </div>
   );
 
+  function renderPlSection(key: DashboardSectionKey): ReactNode {
+    switch (key) {
+      case "bc":
+        if (!vis.bc) return null;
+        return (
+          <section key="bc" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <SectionHeading
+                title="Buy / Sell cards (BC) — focus"
+                description="Single cards bought to flip. Same BC### pairs a buy with its sell (e.g. BC006)."
+              />
+              {periodControls}
+            </div>
+            {bcCategory && <BcSummaryCards row={bcCategory} data={data} />}
+            {bcRows.length > 0 ? (
+              <DisplayIdTable
+                category="bc"
+                title="BC — by transaction"
+                hint="Qty = cards in the deal (not buy+sell doubled) · Current price from Inventory column R"
+                rows={bcRows}
+                showUnrealized
+                showCurrentPrice
+                hideMargin
+              />
+            ) : (
+              <p className="rounded-lg border border-dashed border-border bg-surface-elevated px-4 py-8 text-center text-sm text-muted">
+                No BC transactions in this period.
+              </p>
+            )}
+          </section>
+        );
+      case "snapshot":
+        if (!vis.snapshot) return null;
+        return (
+          <section key="snapshot">
+            <div className="mb-3">
+              <SectionHeading title="Portfolio snapshot & ROI" description="All-time figures" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <SnapshotCard
+                label="Est. market value"
+                value={formatMoney(data.totalMarketValue)}
+                hint={`${data.inStockCount} in-stock rows`}
+              />
+              <SnapshotCard
+                label="Remaining capital"
+                value={formatMoney(data.remainingCapital)}
+                hint="Buy spend − cost of sold (capital in unsold stock)"
+              />
+              <SnapshotCard
+                label="Unrealized P/L"
+                value={<PlValue value={data.unrealizedPl} />}
+                hint="Market − cost on in-stock"
+              />
+              <SnapshotCard
+                label="All-time realized P/L"
+                value={<PlValue value={data.realizedPlAll} />}
+                hint="TXN + BC realized"
+              />
+              <SnapshotCard
+                label="ROI %"
+                value={<PctValue value={data.roiPct} />}
+                hint="Realized ÷ purchases"
+              />
+              <SnapshotCard
+                label="Profit margin %"
+                value={<PctValue value={data.marginPct} />}
+                hint="Realized ÷ sales"
+              />
+              <SnapshotCard
+                label="Business expenses"
+                value={formatMoney(data.businessExpensesTotal)}
+                hint="Operating costs"
+              />
+              <SnapshotCard
+                label="Net profit (after expenses)"
+                value={<PlValue value={data.netProfitAfterExpenses} />}
+                hint="Realized P/L − expenses"
+              />
+            </div>
+          </section>
+        );
+      case "txn":
+        if (!vis.txn) return null;
+        return (
+          <section key="txn" className="space-y-4">
+            <SectionHeading
+              title="Case breaks (TXN)"
+              description="P/L = card sales − case cost (unsold pulls not deducted)."
+            />
+            {txnCategory && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <BatchCategoryCard row={txnCategory} />
+              </div>
+            )}
+            {txnRows.length > 0 ? (
+              <DisplayIdTable
+                category="txn"
+                title="TXN — by transaction"
+                hint="ROI = realized ÷ case cost · Margin = realized ÷ sales"
+                rows={txnRows}
+              />
+            ) : (
+              <p className="rounded-lg border border-dashed border-border bg-surface-elevated px-4 py-8 text-center text-sm text-muted">
+                No TXN transactions in this period.
+              </p>
+            )}
+          </section>
+        );
+      case "monthly":
+        if (!vis.monthly) return null;
+        return (
+          <section key="monthly" className="space-y-4">
+            <SectionHeading
+              title="Monthly P/L"
+              description="By transaction date · fees not included here"
+            />
+            {data.months.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-border bg-surface-elevated px-4 py-8 text-center text-sm text-muted">
+                No transactions yet.
+              </p>
+            ) : (
+              <>
+                {selected && <MonthSummaryCards row={selected} />}
+                <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+                  <table className="table-header-accent min-w-full text-sm">
+                    <thead>
+                      <tr className="bg-surface-elevated text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        <th className="px-4 py-3">Month</th>
+                        <th className="px-4 py-3 text-right">Purchases</th>
+                        <th className="px-4 py-3 text-right">Sales</th>
+                        <th className="px-4 py-3 text-right">Realized P/L</th>
+                        <th className="px-4 py-3 text-right">Net cash</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {data.months.map((m) => (
+                        <tr
+                          key={m.month}
+                          className={cn(
+                            "cursor-pointer transition-colors hover:bg-surface-elevated",
+                            m.month === selectedMonth && "bg-surface-elevated"
+                          )}
+                          onClick={() => setSelectedMonth(m.month)}
+                        >
+                          <td className="px-4 py-3 font-medium text-foreground">{m.label}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            {formatMoney(m.buyTotal)}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            {formatMoney(m.sellTotal)}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            <PlValue value={m.realizedPl} />
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums">
+                            <PlValue value={m.netCashFlow} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </section>
+        );
+      default:
+        return null;
+    }
+  }
+
   return (
     <div className="space-y-8">
-      {/* BC — primary focus, on top */}
-      {vis.bc && (
-        <section className="space-y-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <SectionHeading
-              title="Buy / Sell cards (BC) — focus"
-              description="Single cards bought to flip. Same BC### pairs a buy with its sell (e.g. BC006)."
-            />
-            {periodControls}
-          </div>
-
-          {bcCategory && <BcSummaryCards row={bcCategory} data={data} />}
-
-          {bcRows.length > 0 ? (
-            <DisplayIdTable
-              category="bc"
-              title="BC — by transaction"
-              hint="Qty = cards in the deal (not buy+sell doubled) · Current price from Inventory column R"
-              rows={bcRows}
-              showUnrealized
-              showCurrentPrice
-              hideMargin
-            />
-          ) : (
-            <p className="rounded-lg border border-dashed border-border bg-surface-elevated px-4 py-8 text-center text-sm text-muted">
-              No BC transactions in this period.
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* Portfolio snapshot & ROI */}
-      {vis.snapshot && (
-        <section>
-          <div className="mb-3">
-            <SectionHeading title="Portfolio snapshot & ROI" description="All-time figures" />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <SnapshotCard
-              label="Est. market value"
-              value={formatMoney(data.totalMarketValue)}
-              hint={`${data.inStockCount} in-stock rows`}
-            />
-            <SnapshotCard
-              label="Remaining capital"
-              value={formatMoney(data.remainingCapital)}
-              hint="Buy spend − cost of sold (capital in unsold stock)"
-            />
-            <SnapshotCard
-              label="Unrealized P/L"
-              value={<PlValue value={data.unrealizedPl} />}
-              hint="Market − cost on in-stock"
-            />
-            <SnapshotCard
-              label="All-time realized P/L"
-              value={<PlValue value={data.realizedPlAll} />}
-              hint="TXN + BC realized"
-            />
-            <SnapshotCard
-              label="ROI %"
-              value={<PctValue value={data.roiPct} />}
-              hint="Realized ÷ purchases"
-            />
-            <SnapshotCard
-              label="Profit margin %"
-              value={<PctValue value={data.marginPct} />}
-              hint="Realized ÷ sales"
-            />
-            <SnapshotCard
-              label="Business expenses"
-              value={formatMoney(data.businessExpensesTotal)}
-              hint="Operating costs"
-            />
-            <SnapshotCard
-              label="Net profit (after expenses)"
-              value={<PlValue value={data.netProfitAfterExpenses} />}
-              hint="Realized P/L − expenses"
-            />
-          </div>
-        </section>
-      )}
-
-      {/* TXN — case breaks */}
-      {vis.txn && (
-        <section className="space-y-4">
-          <SectionHeading
-            title="Case breaks (TXN)"
-            description="P/L = card sales − case cost (unsold pulls not deducted)."
-          />
-          {txnCategory && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <BatchCategoryCard row={txnCategory} />
-            </div>
-          )}
-          {txnRows.length > 0 ? (
-            <DisplayIdTable
-              category="txn"
-              title="TXN — by transaction"
-              hint="ROI = realized ÷ case cost · Margin = realized ÷ sales"
-              rows={txnRows}
-            />
-          ) : (
-            <p className="rounded-lg border border-dashed border-border bg-surface-elevated px-4 py-8 text-center text-sm text-muted">
-              No TXN transactions in this period.
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* Monthly P/L */}
-      {vis.monthly && (
-        <section className="space-y-4">
-          <SectionHeading title="Monthly P/L" description="By transaction date · fees not included here" />
-
-          {data.months.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border bg-surface-elevated px-4 py-8 text-center text-sm text-muted">
-              No transactions yet.
-            </p>
-          ) : (
-            <>
-              {selected && <MonthSummaryCards row={selected} />}
-
-              <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-                <table className="table-header-accent min-w-full text-sm">
-                  <thead>
-                    <tr className="bg-surface-elevated text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      <th className="px-4 py-3">Month</th>
-                      <th className="px-4 py-3 text-right">Purchases</th>
-                      <th className="px-4 py-3 text-right">Sales</th>
-                      <th className="px-4 py-3 text-right">Realized P/L</th>
-                      <th className="px-4 py-3 text-right">Net cash</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {data.months.map((m) => (
-                      <tr
-                        key={m.month}
-                        className={cn(
-                          "cursor-pointer transition-colors hover:bg-surface-elevated",
-                          m.month === selectedMonth && "bg-surface-elevated"
-                        )}
-                        onClick={() => setSelectedMonth(m.month)}
-                      >
-                        <td className="px-4 py-3 font-medium text-foreground">{m.label}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">{formatMoney(m.buyTotal)}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">{formatMoney(m.sellTotal)}</td>
-                        <td className="px-4 py-3 text-right tabular-nums">
-                          <PlValue value={m.realizedPl} />
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
-                          <PlValue value={m.netCashFlow} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </section>
-      )}
+      {plOrder.map((key) => renderPlSection(key))}
     </div>
   );
 }

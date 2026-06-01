@@ -88,6 +88,7 @@ export const businessExpenseSchema = z.object({
 
 export const dashboardPrefsSchema = z.object({
   hidden: z.array(z.string()).max(50),
+  order: z.array(z.string()).max(50).optional(),
 });
 
 export const profileUpdateSchema = z.object({

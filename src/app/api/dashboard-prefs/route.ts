@@ -16,7 +16,12 @@ export async function PATCH(request: Request) {
     try {
       await prisma.workspaceMember.update({
         where: { id: membership.id },
-        data: { dashboardPrefs: { hidden: parsed.data.hidden } },
+        data: {
+          dashboardPrefs: {
+            hidden: parsed.data.hidden,
+            order: parsed.data.order ?? undefined,
+          },
+        },
       });
     } catch (e) {
       if (isSchemaNotReadyError(e)) {
@@ -25,7 +30,11 @@ export async function PATCH(request: Request) {
       throw e;
     }
 
-    return NextResponse.json({ ok: true, hidden: parsed.data.hidden });
+    return NextResponse.json({
+      ok: true,
+      hidden: parsed.data.hidden,
+      order: parsed.data.order,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Update failed";
     const status = message === "Unauthorized" ? 401 : 500;
