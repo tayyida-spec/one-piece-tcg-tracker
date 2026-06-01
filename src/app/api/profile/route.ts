@@ -22,7 +22,7 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    const { user, membership } = await requireUser();
+    const { membership } = await requireUser();
     const body = await request.json();
     const parsed = profileUpdateSchema.safeParse(body);
 

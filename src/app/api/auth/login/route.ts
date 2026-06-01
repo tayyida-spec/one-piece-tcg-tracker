@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     }
 
     const { email, password, rememberMe } = parsed.data;
-    let response = NextResponse.json({ ok: true, rememberMe });
+    const response = NextResponse.json({ ok: true, rememberMe });
 
     const supabase = createServerClient(env.url, env.key, {
       global: { fetch: supabaseServerFetch },
