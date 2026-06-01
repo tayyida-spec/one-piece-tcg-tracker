@@ -12,8 +12,10 @@ export async function updateSession(request: NextRequest) {
 
   const isPublic = request.nextUrl.pathname === "/";
   const isAuthApi = request.nextUrl.pathname.startsWith("/api/auth/");
+  const isPublicApi =
+    isAuthApi || request.nextUrl.pathname.startsWith("/api/setup-check");
 
-  if (!user && !isAuthRoute && !isPublic && !isAuthApi) {
+  if (!user && !isAuthRoute && !isPublic && !isPublicApi) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
