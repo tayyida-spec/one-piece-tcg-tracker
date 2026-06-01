@@ -1,3 +1,5 @@
+import { isTlsCertificateError, supabaseServerFetch } from "@/lib/supabase/server-fetch";
+
 export type SupabaseHealth = {
   ok: boolean;
   url: string | null;
@@ -32,16 +34,18 @@ export async function checkSupabaseHealth(): Promise<SupabaseHealth> {
   }
 
   try {
-    const res = await fetch(`${url}/auth/v1/health`, {
+    const res = await supabaseServerFetch(`${url}/auth/v1/health`, {
+      headers: { apikey: key },
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) {
+    // Any HTTP response means the host is reachable (401 without key is fine).
+    if (res.status >= 500) {
       return {
         ok: false,
         url,
         projectRef,
-        message: `Supabase returned HTTP ${res.status}. Check the project is active in the dashboard.`,
+        message: `Supabase returned HTTP ${res.status}. The project may still be starting up — try again shortly.`,
       };
     }
     return {
@@ -51,12 +55,21 @@ export async function checkSupabaseHealth(): Promise<SupabaseHealth> {
       message: "Supabase is reachable.",
     };
   } catch (e) {
+    if (isTlsCertificateError(e)) {
+      return {
+        ok: false,
+        url,
+        projectRef,
+        message:
+          "Node cannot verify Supabase TLS on this network (corporate VPN/proxy). Sign-in will use your browser instead — or set SUPABASE_INSECURE_TLS=1 in .env and restart npm run dev.",
+      };
+    }
     const detail = e instanceof Error ? e.message : String(e);
     return {
       ok: false,
       url,
       projectRef,
-      message: `Cannot reach Supabase (${detail}). Project "${projectRef}" may be paused (restoring), deleted, or the URL in .env / Vercel is outdated. If you just resumed the project, wait a few minutes for DNS and auth to come back, then refresh.`,
+      message: `Cannot reach Supabase (${detail}). Confirm the project is active at supabase.com/dashboard and env vars match Settings → API.`,
     };
   }
 }

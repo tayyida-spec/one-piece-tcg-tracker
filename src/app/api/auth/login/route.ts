@@ -5,6 +5,7 @@ import {
   parseCookieHeader,
   rememberMeCookieOptions,
 } from "@/lib/auth-cookies";
+import { isTlsCertificateError, supabaseServerFetch } from "@/lib/supabase/server-fetch";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +26,12 @@ function getSupabaseEnv() {
 
 function networkErrorMessage(e: unknown): string | null {
   const msg = e instanceof Error ? e.message : String(e);
-  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|unable to verify/i.test(msg)) {
+  if (isTlsCertificateError(e) || /unable to verify/i.test(msg)) {
+    return "Server cannot verify Supabase TLS (common on corporate VPN). Sign-in will retry in your browser automatically — or disable VPN and refresh.";
+  }
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT/i.test(msg)) {
     const host = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "(not set)";
-    return `Cannot reach Supabase at ${host}. The project may still be restoring after pause — wait a few minutes and try again. If it persists, open Supabase Dashboard → Project Settings → API and confirm the Project URL and anon key match Vercel/local .env.`;
+    return `Cannot reach Supabase at ${host}. Confirm the project is active and env vars match Supabase Dashboard → Settings → API.`;
   }
   return null;
 }
@@ -56,6 +60,7 @@ export async function POST(request: Request) {
     let response = NextResponse.json({ ok: true, rememberMe });
 
     const supabase = createServerClient(env.url, env.key, {
+      global: { fetch: supabaseServerFetch },
       cookies: {
         getAll() {
           const header = request.headers.get("cookie");
