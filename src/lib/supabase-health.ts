@@ -56,7 +56,7 @@ export async function checkSupabaseHealth(): Promise<SupabaseHealth> {
       ok: false,
       url,
       projectRef,
-      message: `Cannot reach Supabase (${detail}). Project "${projectRef}" may be deleted, paused, or the URL in .env / Vercel is outdated. Open supabase.com/dashboard → your project → Settings → API and update all env vars.`,
+      message: `Cannot reach Supabase (${detail}). Project "${projectRef}" may be paused (restoring), deleted, or the URL in .env / Vercel is outdated. If you just resumed the project, wait a few minutes for DNS and auth to come back, then refresh.`,
     };
   }
 }

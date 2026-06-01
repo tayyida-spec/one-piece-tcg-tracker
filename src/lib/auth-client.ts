@@ -3,7 +3,7 @@ import { persistRememberMePreference } from "@/lib/auth-remember";
 function formatAuthError(err: unknown, fallback: string): string {
   if (err instanceof Error) {
     if (/failed to fetch|networkerror|load failed/i.test(err.message)) {
-      return "Cannot reach the authentication server. Your Supabase project URL may be wrong or the project was deleted — check the yellow banner on this page, or update NEXT_PUBLIC_SUPABASE_URL in Vercel and .env.";
+      return "Cannot reach the authentication server. If your Supabase project was paused, wait until restore finishes and try again. Otherwise check the yellow banner on this page or update NEXT_PUBLIC_SUPABASE_URL in Vercel and .env.";
     }
     return err.message;
   }
