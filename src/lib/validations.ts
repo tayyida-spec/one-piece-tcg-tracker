@@ -57,6 +57,39 @@ export const transactionLineEditSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
+export const BUSINESS_EXPENSE_CATEGORIES = [
+  "Card Supplies",
+  "Stock / Pre-order",
+  "Subscription",
+  "Marketing",
+  "Shipping & Packaging",
+  "Platform Fees",
+  "Equipment",
+  "Storage",
+  "Professional Services",
+  "Travel & Transport",
+  "Miscellaneous",
+] as const;
+
+export const businessExpenseSchema = z.object({
+  category: z.string().min(1, "Category is required"),
+  itemName: z.string().min(1, "Item/service name is required"),
+  vendor: z.string().optional().nullable(),
+  date: z.string().min(1, "Date is required"),
+  amount: z.coerce.number().min(0, "Amount must be 0 or more"),
+  paymentMethod: z.string().optional().nullable(),
+  recurring: z.coerce.boolean().optional().default(false),
+  frequency: z.string().optional().nullable(),
+  owner: z.string().optional().nullable(),
+  reimbursement: z.string().optional().nullable(),
+  expenseCode: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export const dashboardPrefsSchema = z.object({
+  hidden: z.array(z.string()).max(50),
+});
+
 export const profileUpdateSchema = z.object({
   displayName: z
     .string()

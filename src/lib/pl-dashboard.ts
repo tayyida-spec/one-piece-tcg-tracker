@@ -63,6 +63,12 @@ export type DisplayIdPlRow = {
   realizedPl: number;
   netCashFlow: number;
   lineCount: number;
+  /** Total units traded across this batch (buy + sell line quantities). */
+  qtyTraded: number;
+  /** Realized P/L ÷ purchases (profit on cost). null when no purchases. */
+  roiPct: number | null;
+  /** Realized P/L ÷ sales (profit margin). null when no sales. */
+  marginPct: number | null;
   /** BC only — unsold portion at current market vs buy cost */
   unrealizedPl?: number;
   remainingMarketValue?: number;
@@ -116,6 +122,26 @@ export type PlDashboardData = {
   /** BC batches with unsold cards — market − cost on remaining qty */
   bcUnrealizedPl: number;
   bcRemainingMarketValue: number;
+  /** All buy line amounts across every transaction. */
+  totalBuySpend: number;
+  /** All sell line amounts across every transaction. */
+  totalSellRevenue: number;
+  /** Cost basis of units already sold. */
+  soldCostBasis: number;
+  /** Capital still tied up in unsold stock = total buy spend − sold cost basis. */
+  remainingCapital: number;
+  /** All-time realized P/L (batch method, matches the per-batch tables). */
+  realizedPlAll: number;
+  /** Realized P/L ÷ total purchases. */
+  roiPct: number | null;
+  /** Realized P/L ÷ total sales. */
+  marginPct: number | null;
+  /** Sum of business expenses passed in. */
+  businessExpensesTotal: number;
+  /** Sales − purchases − business expenses. */
+  netCashFlow: number;
+  /** Realized P/L − business expenses. */
+  netProfitAfterExpenses: number;
 };
 
 export function monthKey(date: string | Date): string {
@@ -170,6 +196,8 @@ export function batchPlForDisplayId(
     }
   }
 
+  const qtyTraded = round2(groupLines.reduce((s, l) => s + l.quantity, 0));
+
   const base: DisplayIdPlRow = {
     displayId,
     subtitle: deriveBatchSubtitle(displayId, groupLines),
@@ -179,6 +207,9 @@ export function batchPlForDisplayId(
     realizedPl: round2(realizedPl),
     netCashFlow: round2(sellTotal - buyTotal),
     lineCount: groupLines.length,
+    qtyTraded,
+    roiPct: buyTotal > 0 ? round2((realizedPl / buyTotal) * 100) : null,
+    marginPct: sellTotal > 0 ? round2((realizedPl / sellTotal) * 100) : null,
   };
 
   if (cat === "bc" && inventoryById) {
@@ -475,7 +506,8 @@ export function realizedPlForSellLine(line: PlLineInput, allLines: PlLineInput[]
 
 export function buildPlDashboard(
   lines: PlLineInput[],
-  inventory: PlInventoryInput[]
+  inventory: PlInventoryInput[],
+  businessExpensesTotal = 0
 ): PlDashboardData {
   const inventoryById = new Map(inventory.map((item) => [item.id, item]));
   const monthMap = new Map<
@@ -539,6 +571,27 @@ export function buildPlDashboard(
 
   const { bcUnrealizedPl, bcRemainingMarketValue } = sumBcUnrealized(lines, inventoryById);
 
+  let totalBuySpend = 0;
+  let totalSellRevenue = 0;
+  let soldCostBasis = 0;
+  for (const line of lines) {
+    const amount = lineAmount(line.quantity, line.unitPrice);
+    const type = line.transactionType.toLowerCase();
+    if (type === "buy") {
+      totalBuySpend += amount;
+    } else if (type === "sell") {
+      totalSellRevenue += amount;
+      soldCostBasis += costBasisPerUnit(line, lines) * line.quantity;
+    }
+  }
+
+  const realizedPlAll = round2(
+    breakdownByDisplayId(lines).reduce((s, r) => s + r.realizedPl, 0)
+  );
+  const remainingCapital = round2(totalBuySpend - soldCostBasis);
+  const netCashFlow = round2(totalSellRevenue - totalBuySpend - businessExpensesTotal);
+  const netProfitAfterExpenses = round2(realizedPlAll - businessExpensesTotal);
+
   return {
     months,
     unrealizedPl: round2(totalMarket - totalCost),
@@ -547,6 +600,16 @@ export function buildPlDashboard(
     inStockCount,
     bcUnrealizedPl,
     bcRemainingMarketValue,
+    totalBuySpend: round2(totalBuySpend),
+    totalSellRevenue: round2(totalSellRevenue),
+    soldCostBasis: round2(soldCostBasis),
+    remainingCapital,
+    realizedPlAll,
+    roiPct: totalBuySpend > 0 ? round2((realizedPlAll / totalBuySpend) * 100) : null,
+    marginPct: totalSellRevenue > 0 ? round2((realizedPlAll / totalSellRevenue) * 100) : null,
+    businessExpensesTotal: round2(businessExpensesTotal),
+    netCashFlow,
+    netProfitAfterExpenses,
   };
 }
 

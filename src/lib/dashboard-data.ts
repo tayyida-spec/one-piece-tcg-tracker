@@ -8,6 +8,12 @@ import {
 } from "@/lib/pl-dashboard";
 import { dashboardCacheTag } from "@/lib/cache-tags";
 
+export type ExpenseSummary = {
+  total: number;
+  count: number;
+  byCategory: { category: string; amount: number }[];
+};
+
 export type DashboardPayload = {
   transactionCount: number;
   inventoryCount: number;
@@ -15,6 +21,7 @@ export type DashboardPayload = {
   plData: PlDashboardData;
   plLines: PlLineInput[];
   inventorySnapshot: PlInventoryInput[];
+  expenseSummary: ExpenseSummary;
   recentTransactions: {
     id: string;
     displayId: string;
@@ -25,7 +32,7 @@ export type DashboardPayload = {
 };
 
 async function loadDashboardPayload(workspaceId: string): Promise<DashboardPayload> {
-  const [transactionCount, inventoryCount, recentTransactions, lines, inStockItems] =
+  const [transactionCount, inventoryCount, recentTransactions, lines, inStockItems, expenses] =
     await Promise.all([
       prisma.transaction.count({ where: { workspaceId } }),
       prisma.inventoryItem.count({ where: { workspaceId } }),
@@ -52,6 +59,10 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
           currentMarketPrice: true,
           status: true,
         },
+      }),
+      prisma.businessExpense.findMany({
+        where: { workspaceId },
+        select: { amount: true, category: true },
       }),
     ]);
 
@@ -87,7 +98,23 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
     status: i.status,
   }));
 
-  const plData = buildPlDashboard(plLines, inventorySnapshot);
+  const categoryMap = new Map<string, number>();
+  let expensesTotal = 0;
+  for (const e of expenses) {
+    const amount = Number(e.amount);
+    expensesTotal += amount;
+    categoryMap.set(e.category, (categoryMap.get(e.category) ?? 0) + amount);
+  }
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const expenseSummary: ExpenseSummary = {
+    total: round2(expensesTotal),
+    count: expenses.length,
+    byCategory: [...categoryMap.entries()]
+      .map(([category, amount]) => ({ category, amount: round2(amount) }))
+      .sort((a, b) => b.amount - a.amount),
+  };
+
+  const plData = buildPlDashboard(plLines, inventorySnapshot, expenseSummary.total);
 
   return {
     transactionCount,
@@ -96,6 +123,7 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
     plData,
     plLines,
     inventorySnapshot,
+    expenseSummary,
     recentTransactions: recentTransactions.map((t) => ({
       id: t.id,
       displayId: t.displayId,

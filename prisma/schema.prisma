@@ -17,16 +17,18 @@ model Workspace {
   inventoryItems InventoryItem[]
   transactions   Transaction[]
   cardCatalog    CardCatalogEntry[]
+  businessExpenses BusinessExpense[]
 }
 
 model WorkspaceMember {
-  id          String    @id @default(cuid())
-  workspaceId String
-  userId      String
-  role        String    @default("member")
-  displayName String?
-  createdAt   DateTime  @default(now())
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id             String    @id @default(cuid())
+  workspaceId    String
+  userId         String
+  role           String    @default("member")
+  displayName    String?
+  dashboardPrefs Json?
+  createdAt      DateTime  @default(now())
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -105,6 +107,29 @@ model TransactionLine {
 
   @@index([transactionId])
   @@index([inventoryItemId])
+}
+
+model BusinessExpense {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  expenseCode   String?
+  category      String
+  itemName      String
+  vendor        String?
+  date          DateTime
+  amount        Decimal   @db.Decimal(12, 2)
+  paymentMethod String?
+  recurring     Boolean   @default(false)
+  frequency     String?
+  owner         String?
+  reimbursement String?
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, date])
 }
 
 model CardCatalogEntry {

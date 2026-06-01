@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && npm run db:bootstrap && next build",
+    "db:bootstrap": "node scripts/apply-business-expense-migration.mjs && node scripts/seed-business-expenses.mjs",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
@@ -13,6 +14,7 @@
     "db:studio": "prisma studio",
     "import:transactions": "node scripts/import-transactions.mjs",
     "migrate:sc-to-bc": "node scripts/migrate-sc-to-bc.mjs",
+    "seed:expenses": "node scripts/seed-business-expenses.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
