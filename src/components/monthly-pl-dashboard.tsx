@@ -155,11 +155,13 @@ export function MonthlyPlDashboard({ data, lines, inventory, visible }: Props) {
             <DisplayIdTable
               category="bc"
               title="BC — by transaction"
-              hint="Realized = sales − purchases · ROI = realized ÷ purchases · Share = market value of unsold ÷ portfolio"
+              hint="Qty = cards in the deal (not buy+sell doubled) · Current price from Inventory column R"
               rows={bcRows}
               totalMarketValue={data.totalMarketValue}
               showUnrealized
               showPortfolioShare
+              showCurrentPrice
+              hideMargin
             />
           ) : (
             <p className="rounded-lg border border-dashed border-border bg-surface-elevated px-4 py-8 text-center text-sm text-muted">
@@ -366,6 +368,8 @@ function DisplayIdTable({
   totalMarketValue,
   showUnrealized = false,
   showPortfolioShare = false,
+  showCurrentPrice = false,
+  hideMargin = false,
 }: {
   category: TransactionBatchCategory;
   title: string;
@@ -374,6 +378,8 @@ function DisplayIdTable({
   totalMarketValue: number;
   showUnrealized?: boolean;
   showPortfolioShare?: boolean;
+  showCurrentPrice?: boolean;
+  hideMargin?: boolean;
 }) {
   return (
     <div
@@ -400,7 +406,8 @@ function DisplayIdTable({
             <th className="px-4 py-2 text-right">Sales</th>
             <th className="px-4 py-2 text-right">Realized P/L</th>
             <th className="px-4 py-2 text-right">ROI %</th>
-            <th className="px-4 py-2 text-right">Margin %</th>
+            {!hideMargin ? <th className="px-4 py-2 text-right">Margin %</th> : null}
+            {showCurrentPrice ? <th className="px-4 py-2 text-right">Current price</th> : null}
             {showUnrealized ? <th className="px-4 py-2 text-right">Unrealized P/L</th> : null}
             {showPortfolioShare ? <th className="px-4 py-2 text-right">Share %</th> : null}
             <th className="px-4 py-2 text-right">Net cash</th>
@@ -421,9 +428,16 @@ function DisplayIdTable({
               <td className="px-4 py-2 text-right tabular-nums">
                 <PctValue value={r.roiPct} />
               </td>
-              <td className="px-4 py-2 text-right tabular-nums">
-                <PctValue value={r.marginPct} />
-              </td>
+              {!hideMargin ? (
+                <td className="px-4 py-2 text-right tabular-nums">
+                  <PctValue value={r.marginPct} />
+                </td>
+              ) : null}
+              {showCurrentPrice ? (
+                <td className="px-4 py-2 text-right tabular-nums">
+                  <CurrentPriceCell row={r} />
+                </td>
+              ) : null}
               {showUnrealized ? (
                 <td className="px-4 py-2 text-right tabular-nums">
                   <UnrealizedCell row={r} />
@@ -444,6 +458,17 @@ function DisplayIdTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function CurrentPriceCell({ row }: { row: DisplayIdPlRow }) {
+  if (row.currentMarketPrice != null && row.currentMarketPrice > 0) {
+    return <span className="text-foreground">{formatMoney(row.currentMarketPrice)}</span>;
+  }
+  return (
+    <span className="text-muted" title="Set current market price in Inventory">
+      —
+    </span>
   );
 }
 

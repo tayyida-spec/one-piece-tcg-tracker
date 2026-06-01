@@ -33,7 +33,7 @@ export type DashboardPayload = {
 };
 
 async function loadDashboardPayload(workspaceId: string): Promise<DashboardPayload> {
-  const [transactionCount, inventoryCount, recentTransactions, lines, inStockItems, expenses] =
+  const [transactionCount, inventoryCount, recentTransactions, lines, inventoryItems, expenses] =
     await Promise.all([
       prisma.transaction.count({ where: { workspaceId } }),
       prisma.inventoryItem.count({ where: { workspaceId } }),
@@ -47,14 +47,20 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
         where: { transaction: { workspaceId } },
         include: {
           transaction: true,
-          inventoryItem: { select: { purchasePrice: true } },
+          inventoryItem: { select: { purchasePrice: true, currentMarketPrice: true } },
         },
         orderBy: { transaction: { date: "asc" } },
       }),
       prisma.inventoryItem.findMany({
-        where: { workspaceId, status: "in_stock" },
+        where: { workspaceId },
         select: {
           id: true,
+          itemType: true,
+          cardId: true,
+          series: true,
+          rarity: true,
+          variant: true,
+          language: true,
           quantity: true,
           purchasePrice: true,
           currentMarketPrice: true,
@@ -87,8 +93,14 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
         : null,
   }));
 
-  const inventorySnapshot: PlInventoryInput[] = inStockItems.map((i) => ({
+  const inventorySnapshot: PlInventoryInput[] = inventoryItems.map((i) => ({
     id: i.id,
+    itemType: i.itemType,
+    cardId: i.cardId,
+    series: i.series,
+    rarity: i.rarity,
+    variant: i.variant,
+    language: i.language,
     quantity: Number(i.quantity),
     purchasePrice: i.purchasePrice != null ? Number(i.purchasePrice) : null,
     currentMarketPrice:

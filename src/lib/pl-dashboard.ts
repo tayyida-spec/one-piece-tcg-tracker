@@ -63,12 +63,14 @@ export type DisplayIdPlRow = {
   realizedPl: number;
   netCashFlow: number;
   lineCount: number;
-  /** Total units traded across this batch (buy + sell line quantities). */
+  /** Card quantity for this batch (BC: max of buy/sell qty, not summed). */
   qtyTraded: number;
   /** Realized P/L ÷ purchases (profit on cost). null when no purchases. */
   roiPct: number | null;
   /** Realized P/L ÷ sales (profit margin). null when no sales. */
   marginPct: number | null;
+  /** BC only — current market price per card from inventory */
+  currentMarketPrice?: number | null;
   /** BC only — unsold portion at current market vs buy cost */
   unrealizedPl?: number;
   remainingMarketValue?: number;
@@ -79,6 +81,12 @@ export type DisplayIdPlRow = {
 
 export type PlInventoryInput = {
   id: string;
+  itemType: string;
+  cardId: string;
+  series: string;
+  rarity: string;
+  variant: string;
+  language: string;
   quantity: number;
   purchasePrice: number | null;
   currentMarketPrice: number | null;
@@ -196,7 +204,7 @@ export function batchPlForDisplayId(
     }
   }
 
-  const qtyTraded = round2(groupLines.reduce((s, l) => s + l.quantity, 0));
+  const qtyTraded = batchQtyTraded(groupLines, cat);
 
   const base: DisplayIdPlRow = {
     displayId,
@@ -214,10 +222,64 @@ export function batchPlForDisplayId(
 
   if (cat === "bc" && inventoryById) {
     const unrealized = bcUnrealizedForDisplayId(displayId, allLines, inventoryById);
-    return { ...base, ...unrealized };
+    const market = bcCurrentMarketPriceForDisplayId(displayId, allLines, inventoryById);
+    return { ...base, ...unrealized, ...market };
   }
 
   return base;
+}
+
+/** BC qty = units in the deal (1 buy + 1 sell of same card → 1, not 2). */
+function batchQtyTraded(groupLines: PlLineInput[], cat: TransactionBatchCategory): number {
+  if (cat === "bc") {
+    const buyQty = groupLines
+      .filter((l) => l.transactionType.toLowerCase() === "buy")
+      .reduce((s, l) => s + l.quantity, 0);
+    const sellQty = groupLines
+      .filter((l) => l.transactionType.toLowerCase() === "sell")
+      .reduce((s, l) => s + l.quantity, 0);
+    return round2(Math.max(buyQty, sellQty));
+  }
+  return round2(groupLines.reduce((s, l) => s + l.quantity, 0));
+}
+
+/** Current market price per card from linked inventory (includes sold cards). */
+export function bcCurrentMarketPriceForDisplayId(
+  displayId: string,
+  allLines: PlLineInput[],
+  inventoryById: Map<string, PlInventoryInput>
+): Pick<DisplayIdPlRow, "currentMarketPrice" | "hasMarketPrice"> {
+  const groupLines = allLines.filter((l) => l.displayId === displayId);
+  if (batchCategory(displayId) !== "bc" || groupLines.length === 0) {
+    return { currentMarketPrice: null, hasMarketPrice: false };
+  }
+
+  for (const line of groupLines) {
+    if (!line.inventoryItemId) continue;
+    const inv = inventoryById.get(line.inventoryItemId);
+    if (inv?.currentMarketPrice != null && inv.currentMarketPrice > 0) {
+      return {
+        currentMarketPrice: round2(inv.currentMarketPrice),
+        hasMarketPrice: true,
+      };
+    }
+  }
+
+  const anchor = groupLines.find((l) => l.transactionType.toLowerCase() === "buy") ?? groupLines[0];
+  if (anchor) {
+    const lineKey = identityKey(anchor);
+    for (const inv of inventoryById.values()) {
+      const invKey = inventoryIdentityKey(inv);
+      if (invKey === lineKey && inv.currentMarketPrice != null && inv.currentMarketPrice > 0) {
+        return {
+          currentMarketPrice: round2(inv.currentMarketPrice),
+          hasMarketPrice: true,
+        };
+      }
+    }
+  }
+
+  return { currentMarketPrice: null, hasMarketPrice: false };
 }
 
 /** Unrealized P/L for a BC### batch — remaining buy qty × (market − cost). */
@@ -440,6 +502,10 @@ function identityKey(line: PlLineInput): string {
     line.variant,
     line.language,
   ].join("|");
+}
+
+function inventoryIdentityKey(inv: PlInventoryInput): string {
+  return [inv.itemType, inv.cardId, inv.series, inv.rarity, inv.variant, inv.language].join("|");
 }
 
 export function weightedAvgBuyCost(
