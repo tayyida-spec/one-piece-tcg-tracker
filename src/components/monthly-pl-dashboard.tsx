@@ -157,9 +157,7 @@ export function MonthlyPlDashboard({ data, lines, inventory, visible }: Props) {
               title="BC — by transaction"
               hint="Qty = cards in the deal (not buy+sell doubled) · Current price from Inventory column R"
               rows={bcRows}
-              totalMarketValue={data.totalMarketValue}
               showUnrealized
-              showPortfolioShare
               showCurrentPrice
               hideMargin
             />
@@ -240,7 +238,6 @@ export function MonthlyPlDashboard({ data, lines, inventory, visible }: Props) {
               title="TXN — by transaction"
               hint="ROI = realized ÷ case cost · Margin = realized ÷ sales"
               rows={txnRows}
-              totalMarketValue={data.totalMarketValue}
             />
           ) : (
             <p className="rounded-lg border border-dashed border-border bg-surface-elevated px-4 py-8 text-center text-sm text-muted">
@@ -365,9 +362,7 @@ function DisplayIdTable({
   title,
   hint,
   rows,
-  totalMarketValue,
   showUnrealized = false,
-  showPortfolioShare = false,
   showCurrentPrice = false,
   hideMargin = false,
 }: {
@@ -375,9 +370,7 @@ function DisplayIdTable({
   title: string;
   hint: string;
   rows: DisplayIdPlRow[];
-  totalMarketValue: number;
   showUnrealized?: boolean;
-  showPortfolioShare?: boolean;
   showCurrentPrice?: boolean;
   hideMargin?: boolean;
 }) {
@@ -409,7 +402,6 @@ function DisplayIdTable({
             {!hideMargin ? <th className="px-4 py-2 text-right">Margin %</th> : null}
             {showCurrentPrice ? <th className="px-4 py-2 text-right">Current price</th> : null}
             {showUnrealized ? <th className="px-4 py-2 text-right">Unrealized P/L</th> : null}
-            {showPortfolioShare ? <th className="px-4 py-2 text-right">Share %</th> : null}
             <th className="px-4 py-2 text-right">Net cash</th>
           </tr>
         </thead>
@@ -441,13 +433,6 @@ function DisplayIdTable({
               {showUnrealized ? (
                 <td className="px-4 py-2 text-right tabular-nums">
                   <UnrealizedCell row={r} />
-                </td>
-              ) : null}
-              {showPortfolioShare ? (
-                <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">
-                  {totalMarketValue > 0 && r.remainingMarketValue
-                    ? formatPct((r.remainingMarketValue / totalMarketValue) * 100)
-                    : "—"}
                 </td>
               ) : null}
               <td className="px-4 py-2 text-right tabular-nums">
