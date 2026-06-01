@@ -74,6 +74,8 @@ export type DisplayIdPlRow = {
   currentMarketPrice?: number | null;
   /** BC only — unsold portion at current market vs buy cost */
   unrealizedPl?: number;
+  /** BC only — unrealized P/L ÷ remaining cost basis (potential ROI on unsold). */
+  unrealizedRoiPct?: number | null;
   remainingMarketValue?: number;
   remainingCostBasis?: number;
   remainingQty?: number;
@@ -125,6 +127,8 @@ export function formatDisplayIdLabel(displayId: string, subtitle: string | null)
 export type PlDashboardData = {
   months: MonthlyPlRow[];
   unrealizedPl: number;
+  /** Unrealized P/L ÷ in-stock cost basis (portfolio potential ROI). */
+  unrealizedRoiPct: number | null;
   totalMarketValue: number;
   totalCostBasis: number;
   inStockCount: number;
@@ -228,7 +232,12 @@ export function batchPlForDisplayId(
   if (cat === "bc" && inventoryById) {
     const unrealized = bcUnrealizedForDisplayId(displayId, allLines, inventoryById);
     const market = bcCurrentMarketPriceForDisplayId(displayId, allLines, inventoryById);
-    return { ...base, ...unrealized, ...market };
+    const costBasis = unrealized.remainingCostBasis ?? 0;
+    const unrealizedRoiPct =
+      costBasis > 0 && unrealized.hasMarketPrice
+        ? round2(((unrealized.unrealizedPl ?? 0) / costBasis) * 100)
+        : null;
+    return { ...base, ...unrealized, ...market, unrealizedRoiPct };
   }
 
   return base;
@@ -666,10 +675,14 @@ export function buildPlDashboard(
   );
   const netCashFlow = round2(totalSellRevenue - totalBuySpend - businessExpensesTotal);
   const netProfitAfterExpenses = round2(realizedPlAll - businessExpensesTotal);
+  const unrealizedPl = round2(totalMarket - totalCost);
+  const unrealizedRoiPct =
+    totalCost > 0 ? round2((unrealizedPl / totalCost) * 100) : null;
 
   return {
     months,
-    unrealizedPl: round2(totalMarket - totalCost),
+    unrealizedPl,
+    unrealizedRoiPct,
     totalMarketValue: round2(totalMarket),
     totalCostBasis: round2(totalCost),
     inStockCount,

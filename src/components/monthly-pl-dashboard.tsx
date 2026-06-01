@@ -172,7 +172,7 @@ export function MonthlyPlDashboard({
               <DisplayIdTable
                 category="bc"
                 title="BC — by transaction"
-                hint="Qty = cards in the deal (not buy+sell doubled) · Current price from Inventory column R"
+                hint="Qty = cards in the deal (not buy+sell doubled) · Current price from Inventory · Unreal. ROI % = unrealized P/L ÷ unsold cost"
                 rows={bcRows}
                 showUnrealized
                 showCurrentPrice
@@ -210,7 +210,17 @@ export function MonthlyPlDashboard({
               />
               <SnapshotCard
                 label="Unrealized P/L"
-                value={<PlValue value={data.unrealizedPl} />}
+                value={
+                  <div className="space-y-1">
+                    <PlValue value={data.unrealizedPl} className="text-xl font-semibold" />
+                    <p className="text-sm tabular-nums">
+                      <PctValue value={data.unrealizedRoiPct} />{" "}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        potential ROI on cost
+                      </span>
+                    </p>
+                  </div>
+                }
                 hint="Market − cost on in-stock"
               />
               <SnapshotCard
@@ -442,6 +452,7 @@ function DisplayIdTable({
             {!hideMargin ? <th className="px-4 py-2 text-right">Margin %</th> : null}
             {showCurrentPrice ? <th className="px-4 py-2 text-right">Current price</th> : null}
             {showUnrealized ? <th className="px-4 py-2 text-right">Unrealized P/L</th> : null}
+            {showUnrealized ? <th className="px-4 py-2 text-right">Unreal. ROI %</th> : null}
             <th className="px-4 py-2 text-right">Net cash</th>
           </tr>
         </thead>
@@ -473,6 +484,11 @@ function DisplayIdTable({
               {showUnrealized ? (
                 <td className="px-4 py-2 text-right tabular-nums">
                   <UnrealizedCell row={r} />
+                </td>
+              ) : null}
+              {showUnrealized ? (
+                <td className="px-4 py-2 text-right tabular-nums">
+                  <UnrealizedRoiCell row={r} />
                 </td>
               ) : null}
               <td className="px-4 py-2 text-right tabular-nums">
@@ -509,6 +525,20 @@ function UnrealizedCell({ row }: { row: DisplayIdPlRow }) {
     );
   }
   return <PlValue value={row.unrealizedPl ?? 0} />;
+}
+
+function UnrealizedRoiCell({ row }: { row: DisplayIdPlRow }) {
+  if (!row.remainingQty || row.remainingQty <= 0) {
+    return <span className="text-muted">—</span>;
+  }
+  if (!row.hasMarketPrice) {
+    return (
+      <span className="text-muted" title="Set current market price in Inventory">
+        —
+      </span>
+    );
+  }
+  return <PctValue value={row.unrealizedRoiPct} />;
 }
 
 function MonthSummaryCards({ row }: { row: MonthlyPlRow }) {
