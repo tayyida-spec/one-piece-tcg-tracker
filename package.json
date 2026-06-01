@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
-    "build": "prisma generate && npm run db:bootstrap && next build",
+    "build": "prisma generate && next build",
     "db:bootstrap": "node scripts/apply-business-expense-migration.mjs && node scripts/seed-business-expenses.mjs",
     "start": "next start",
     "lint": "next lint",

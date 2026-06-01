@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { businessExpenseSchema } from "@/lib/validations";
 import { revalidateWorkspaceExpenses } from "@/lib/cache-tags";
+import { isSchemaNotReadyError, SCHEMA_NOT_READY_MESSAGE } from "@/lib/safe-db";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -41,6 +42,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     revalidateWorkspaceExpenses(workspaceId);
     return NextResponse.json({ ...updated, amount: Number(updated.amount) });
   } catch (e) {
+    if (isSchemaNotReadyError(e)) {
+      return NextResponse.json({ error: SCHEMA_NOT_READY_MESSAGE, schemaNotReady: true }, { status: 503 });
+    }
     const message = e instanceof Error ? e.message : "Update failed";
     const status = message === "Unauthorized" ? 401 : 500;
     return NextResponse.json({ error: message }, { status });
@@ -61,6 +65,9 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     revalidateWorkspaceExpenses(workspaceId);
     return NextResponse.json({ ok: true });
   } catch (e) {
+    if (isSchemaNotReadyError(e)) {
+      return NextResponse.json({ error: SCHEMA_NOT_READY_MESSAGE, schemaNotReady: true }, { status: 503 });
+    }
     const message = e instanceof Error ? e.message : "Delete failed";
     const status = message === "Unauthorized" ? 401 : 500;
     return NextResponse.json({ error: message }, { status });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { dashboardPrefsSchema } from "@/lib/validations";
+import { isSchemaNotReadyError, SCHEMA_NOT_READY_MESSAGE } from "@/lib/safe-db";
 
 export async function PATCH(request: Request) {
   try {
@@ -12,10 +13,17 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    await prisma.workspaceMember.update({
-      where: { id: membership.id },
-      data: { dashboardPrefs: { hidden: parsed.data.hidden } },
-    });
+    try {
+      await prisma.workspaceMember.update({
+        where: { id: membership.id },
+        data: { dashboardPrefs: { hidden: parsed.data.hidden } },
+      });
+    } catch (e) {
+      if (isSchemaNotReadyError(e)) {
+        return NextResponse.json({ error: SCHEMA_NOT_READY_MESSAGE, schemaNotReady: true }, { status: 503 });
+      }
+      throw e;
+    }
 
     return NextResponse.json({ ok: true, hidden: parsed.data.hidden });
   } catch (e) {

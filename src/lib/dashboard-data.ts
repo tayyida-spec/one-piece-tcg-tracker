@@ -7,6 +7,7 @@ import {
   type PlInventoryInput,
 } from "@/lib/pl-dashboard";
 import { dashboardCacheTag } from "@/lib/cache-tags";
+import { loadExpensesSafe } from "@/lib/safe-db";
 
 export type ExpenseSummary = {
   total: number;
@@ -60,10 +61,7 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
           status: true,
         },
       }),
-      prisma.businessExpense.findMany({
-        where: { workspaceId },
-        select: { amount: true, category: true },
-      }),
+      loadExpensesSafe(workspaceId),
     ]);
 
   const plLines: PlLineInput[] = lines.map((line) => ({

@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { workspaceMemberSelect } from "@/lib/safe-db";
 
 const DEFAULT_WORKSPACE_NAME = "Three Hats";
 
 export async function getWorkspaceForUser(userId: string) {
   const membership = await prisma.workspaceMember.findFirst({
     where: { userId },
-    include: { workspace: true },
+    select: workspaceMemberSelect,
     orderBy: { createdAt: "asc" },
   });
   return membership;
@@ -29,7 +30,7 @@ export async function ensureWorkspaceForUser(userId: string, displayName?: strin
         role: "member",
         displayName: displayName ?? null,
       },
-      include: { workspace: true },
+      select: workspaceMemberSelect,
     });
     return member;
   }
@@ -68,7 +69,7 @@ export async function ensureWorkspaceForUser(userId: string, displayName?: strin
         role: "member",
         displayName: displayName ?? null,
       },
-      include: { workspace: true },
+      select: workspaceMemberSelect,
     });
     return member;
   }
@@ -94,10 +95,11 @@ export async function joinWorkspaceByInviteCode(
         userId,
       },
     },
+    select: workspaceMemberSelect,
   });
 
   if (existing) {
-    return { ...existing, workspace };
+    return existing;
   }
 
   return prisma.workspaceMember.create({
@@ -107,6 +109,6 @@ export async function joinWorkspaceByInviteCode(
       role: "member",
       displayName: displayName ?? null,
     },
-    include: { workspace: true },
+    select: workspaceMemberSelect,
   });
 }

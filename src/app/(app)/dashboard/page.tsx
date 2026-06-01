@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getCachedDashboardPayload } from "@/lib/dashboard-data";
 import { resolveVisibleSections } from "@/lib/dashboard-sections";
+import { getMemberDashboardPrefs } from "@/lib/safe-db";
 import { formatDate, formatMoney } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,8 @@ import { PageHeading, SectionHeading } from "@/components/page-heading";
 
 export default async function DashboardPage() {
   const { workspaceId, membership } = await requireUser();
-  const visible = resolveVisibleSections(membership.dashboardPrefs);
+  const dashboardPrefs = await getMemberDashboardPrefs(membership.id);
+  const visible = resolveVisibleSections(dashboardPrefs);
 
   const {
     transactionCount,
