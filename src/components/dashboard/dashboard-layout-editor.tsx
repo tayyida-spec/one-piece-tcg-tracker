@@ -4,6 +4,7 @@ import { useState } from "react";
 import { GripVertical, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  ALWAYS_VISIBLE_SECTIONS,
   DASHBOARD_SECTIONS,
   DASHBOARD_SECTION_KEYS,
   DEFAULT_DASHBOARD_ORDER,
@@ -32,6 +33,7 @@ export function DashboardLayoutEditor({
   const [dragKey, setDragKey] = useState<DashboardSectionKey | null>(null);
 
   function toggleVisible(key: DashboardSectionKey) {
+    if (ALWAYS_VISIBLE_SECTIONS.has(key)) return;
     onChange({
       ...layout,
       visible: { ...layout.visible, [key]: !layout.visible[key] },
@@ -76,6 +78,7 @@ export function DashboardLayoutEditor({
           const meta = DASHBOARD_SECTIONS.find((s) => s.key === key);
           if (!meta) return null;
           const isVisible = layout.visible[key];
+          const alwaysOn = ALWAYS_VISIBLE_SECTIONS.has(key);
 
           return (
             <li
@@ -102,20 +105,26 @@ export function DashboardLayoutEditor({
                 <GripVertical className="h-5 w-5" />
               </span>
               <span className="flex-1 text-sm font-medium text-foreground">{meta.label}</span>
-              <button
-                type="button"
-                onClick={() => toggleVisible(key)}
-                className={cn(
-                  "rounded-md p-2 transition-colors",
-                  isVisible
-                    ? "text-foreground hover:bg-surface-elevated"
-                    : "text-muted hover:bg-surface-elevated"
-                )}
-                title={isVisible ? "Hide section" : "Show section"}
-                aria-label={isVisible ? `Hide ${meta.label}` : `Show ${meta.label}`}
-              >
-                {isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-              </button>
+              {alwaysOn ? (
+                <span className="rounded-md px-2 py-1 text-xs text-muted-foreground" title="Always shown">
+                  Always on
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggleVisible(key)}
+                  className={cn(
+                    "rounded-md p-2 transition-colors",
+                    isVisible
+                      ? "text-foreground hover:bg-surface-elevated"
+                      : "text-muted hover:bg-surface-elevated"
+                  )}
+                  title={isVisible ? "Hide section" : "Show section"}
+                  aria-label={isVisible ? `Hide ${meta.label}` : `Show ${meta.label}`}
+                >
+                  {isVisible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                </button>
+              )}
             </li>
           );
         })}

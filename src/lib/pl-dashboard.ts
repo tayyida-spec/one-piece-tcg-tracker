@@ -4,6 +4,7 @@
  */
 
 import { batchCategory, BATCH_LABELS, type TransactionBatchCategory } from "@/lib/transaction-codes";
+import { getWorkspaceTotalCapital } from "@/lib/workspace-capital";
 
 export type { TransactionBatchCategory };
 
@@ -136,8 +137,12 @@ export type PlDashboardData = {
   totalSellRevenue: number;
   /** Cost basis of units already sold. */
   soldCostBasis: number;
-  /** Capital still tied up in unsold stock = total buy spend − sold cost basis. */
+  /** Cash left in the pool = pumped-in capital − expenses − purchases + sales. */
   remainingCapital: number;
+  /** Starting workspace cash pool (SGD). */
+  workspaceTotalCapital: number;
+  /** Purchase cost still in unsold stock = total buy spend − sold cost basis. */
+  tiedUpInStock: number;
   /** All-time realized P/L (batch method, matches the per-batch tables). */
   realizedPlAll: number;
   /** Realized P/L ÷ total purchases. */
@@ -654,7 +659,11 @@ export function buildPlDashboard(
   const realizedPlAll = round2(
     breakdownByDisplayId(lines).reduce((s, r) => s + r.realizedPl, 0)
   );
-  const remainingCapital = round2(totalBuySpend - soldCostBasis);
+  const workspaceTotalCapital = getWorkspaceTotalCapital();
+  const tiedUpInStock = round2(totalBuySpend - soldCostBasis);
+  const remainingCapital = round2(
+    workspaceTotalCapital - businessExpensesTotal - totalBuySpend + totalSellRevenue
+  );
   const netCashFlow = round2(totalSellRevenue - totalBuySpend - businessExpensesTotal);
   const netProfitAfterExpenses = round2(realizedPlAll - businessExpensesTotal);
 
@@ -670,6 +679,8 @@ export function buildPlDashboard(
     totalSellRevenue: round2(totalSellRevenue),
     soldCostBasis: round2(soldCostBasis),
     remainingCapital,
+    workspaceTotalCapital,
+    tiedUpInStock,
     realizedPlAll,
     roiPct: totalBuySpend > 0 ? round2((realizedPlAll / totalBuySpend) * 100) : null,
     marginPct: totalSellRevenue > 0 ? round2((realizedPlAll / totalSellRevenue) * 100) : null,

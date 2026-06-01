@@ -19,6 +19,7 @@ import type { TransactionBatchCategory } from "@/lib/transaction-codes";
 import { Select } from "@/components/ui/select";
 import {
   DEFAULT_DASHBOARD_ORDER,
+  isPlSectionKey,
   orderForPlSections,
   resolveVisibleSections,
   type DashboardSectionKey,
@@ -32,6 +33,8 @@ type Props = {
   visible?: DashboardVisibility;
   /** Order of bc / snapshot / txn / monthly within the dashboard. */
   sectionOrder?: DashboardSectionKey[];
+  /** When set, render only this P/L section (used by dashboard layout ordering). */
+  onlySection?: DashboardSectionKey;
 };
 
 function PlValue({ value, className }: { value: number; className?: string }) {
@@ -65,7 +68,14 @@ function PctValue({ value }: { value: number | null | undefined }) {
   );
 }
 
-export function MonthlyPlDashboard({ data, lines, inventory, visible, sectionOrder }: Props) {
+export function MonthlyPlDashboard({
+  data,
+  lines,
+  inventory,
+  visible,
+  sectionOrder,
+  onlySection,
+}: Props) {
   const vis = visible ?? resolveVisibleSections(null);
   const plOrder =
     sectionOrder ??
@@ -191,7 +201,12 @@ export function MonthlyPlDashboard({ data, lines, inventory, visible, sectionOrd
               <SnapshotCard
                 label="Remaining capital"
                 value={formatMoney(data.remainingCapital)}
-                hint="Buy spend − cost of sold (capital in unsold stock)"
+                hint={`${formatMoney(data.workspaceTotalCapital)} pumped in − ${formatMoney(data.businessExpensesTotal)} expenses − ${formatMoney(data.totalBuySpend)} bought + ${formatMoney(data.totalSellRevenue)} sold`}
+              />
+              <SnapshotCard
+                label="Tied up in stock"
+                value={formatMoney(data.tiedUpInStock)}
+                hint="Buy spend − cost of sold units"
               />
               <SnapshotCard
                 label="Unrealized P/L"
@@ -314,6 +329,11 @@ export function MonthlyPlDashboard({ data, lines, inventory, visible, sectionOrd
       default:
         return null;
     }
+  }
+
+  if (onlySection) {
+    if (!isPlSectionKey(onlySection)) return null;
+    return renderPlSection(onlySection);
   }
 
   return (

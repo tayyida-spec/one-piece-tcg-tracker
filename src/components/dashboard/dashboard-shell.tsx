@@ -189,24 +189,6 @@ export function DashboardShell({
     }
   }
 
-  function renderPlBlock() {
-    const hasVisiblePl = plOrder.some((k) => layout.visible[k]);
-    if (!hasVisiblePl) return null;
-
-    return (
-      <MonthlyPlDashboard
-        key="pl-block"
-        data={plData}
-        lines={plLines}
-        inventory={inventorySnapshot}
-        visible={layout.visible}
-        sectionOrder={plOrder}
-      />
-    );
-  }
-
-  let plBlockInserted = false;
-
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -260,9 +242,18 @@ export function DashboardShell({
         <div className="space-y-8">
           {layout.order.map((key) => {
             if (isPlSectionKey(key)) {
-              if (plBlockInserted) return null;
-              plBlockInserted = true;
-              return renderPlBlock();
+              if (!layout.visible[key]) return null;
+              return (
+                <MonthlyPlDashboard
+                  key={key}
+                  onlySection={key}
+                  data={plData}
+                  lines={plLines}
+                  inventory={inventorySnapshot}
+                  visible={layout.visible}
+                  sectionOrder={plOrder}
+                />
+              );
             }
             return renderSection(key);
           })}

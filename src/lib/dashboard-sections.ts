@@ -1,6 +1,6 @@
 export const DASHBOARD_SECTIONS = [
   { key: "bc", label: "Buy / Sell cards (BC)" },
-  { key: "kpis", label: "Top stats" },
+  { key: "kpis", label: "Summary cards (Top stats)" },
   { key: "snapshot", label: "Portfolio snapshot & ROI" },
   { key: "txn", label: "Case breaks (TXN)" },
   { key: "monthly", label: "Monthly P/L" },
@@ -11,6 +11,9 @@ export const DASHBOARD_SECTIONS = [
 export type DashboardSectionKey = (typeof DASHBOARD_SECTIONS)[number]["key"];
 
 export const DASHBOARD_SECTION_KEYS = DASHBOARD_SECTIONS.map((s) => s.key) as DashboardSectionKey[];
+
+/** Always shown — summary cards are too easy to lose when hidden via layout prefs. */
+export const ALWAYS_VISIBLE_SECTIONS: ReadonlySet<DashboardSectionKey> = new Set(["kpis"]);
 
 /** Default section order (BC first). */
 export const DEFAULT_DASHBOARD_ORDER: DashboardSectionKey[] = [...DASHBOARD_SECTION_KEYS];
@@ -82,7 +85,7 @@ export function resolveDashboardLayout(prefs: unknown): DashboardLayout {
   }
 
   const visible = DASHBOARD_SECTION_KEYS.reduce((acc, key) => {
-    acc[key] = !hidden.has(key);
+    acc[key] = ALWAYS_VISIBLE_SECTIONS.has(key) || !hidden.has(key);
     return acc;
   }, {} as DashboardVisibility);
 
@@ -94,7 +97,9 @@ export function resolveDashboardLayout(prefs: unknown): DashboardLayout {
 
 export function layoutToPrefs(layout: DashboardLayout): { hidden: string[]; order: string[] } {
   return {
-    hidden: DASHBOARD_SECTION_KEYS.filter((key) => !layout.visible[key]),
+    hidden: DASHBOARD_SECTION_KEYS.filter(
+      (key) => !ALWAYS_VISIBLE_SECTIONS.has(key) && !layout.visible[key]
+    ),
     order: [...layout.order],
   };
 }
