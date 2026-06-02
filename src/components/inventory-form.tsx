@@ -157,7 +157,7 @@ export function InventoryForm({ initial }: { initial?: InventoryFormValues }) {
           <Input id="purchasePrice" name="purchasePrice" type="number" step="0.01" min="0" defaultValue={initial?.purchasePrice ?? ""} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="currentMarketPrice">Market price (SGD)</Label>
+          <Label htmlFor="currentMarketPrice">Current market price (SGD)</Label>
           <Input id="currentMarketPrice" name="currentMarketPrice" type="number" step="0.01" min="0" defaultValue={initial?.currentMarketPrice ?? ""} />
         </div>
       </div>

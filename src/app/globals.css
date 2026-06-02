@@ -16,7 +16,7 @@
   --color-tan-muted: #9a7d52;
   --color-success: #4ade80;
   --color-danger: #f87171;
-  --font-display: var(--font-cinzel), Georgia, "Times New Roman", serif;
+  --font-display: Georgia, "Times New Roman", Cambria, serif;
 }
 
 :root {

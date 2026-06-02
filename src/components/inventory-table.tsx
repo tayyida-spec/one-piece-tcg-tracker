@@ -82,7 +82,7 @@ const columns: TableColumn<InventoryRow>[] = [
     render: (r) => r.location || "—",
   },
   {
-    header: "Market (SGD)",
+    header: "Current market price (SGD)",
     accessor: (r) => formatMoney(r.currentMarketPrice),
     render: (r) => formatMoney(r.currentMarketPrice),
     cellClassName: "text-right whitespace-nowrap",

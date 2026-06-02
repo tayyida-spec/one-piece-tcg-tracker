@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -53,11 +53,6 @@ export function CapitalClient({
   const [form, setForm] = useState<FormState>(emptyForm());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const totalFromRows = useMemo(
-    () => rows.reduce((s, r) => s + r.amount, 0),
-    [rows]
-  );
 
   function startAdd() {
     setForm(emptyForm());
@@ -134,28 +129,17 @@ export function CapitalClient({
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-lg border border-border bg-surface p-4">
-          <p className="text-xs font-medium uppercase text-muted-foreground">Total pumped in</p>
-          <p className="mt-1 font-display text-2xl font-semibold text-foreground">
-            {formatMoney(totalCapital)}
-          </p>
-          <p className="mt-1 text-xs text-muted">
-            Used for Remaining capital on the dashboard
-          </p>
-        </div>
-        <div className="rounded-lg border border-border bg-surface p-4">
-          <p className="text-xs font-medium uppercase text-muted-foreground">Logged entries</p>
-          <p className="mt-1 font-display text-2xl font-semibold text-foreground">
-            {formatMoney(totalFromRows)}
-          </p>
-          <p className="mt-1 text-xs text-muted">
-            {rows.length} contribution{rows.length === 1 ? "" : "s"}
-            {usingEnvFallback
-              ? ` · env fallback ${formatMoney(getEnvCapitalFallback())} until first entry`
-              : ""}
-          </p>
-        </div>
+      <div className="rounded-lg border border-border bg-surface p-4 max-w-sm">
+        <p className="text-xs font-medium uppercase text-muted-foreground">Total pumped in</p>
+        <p className="mt-1 font-display text-2xl font-semibold text-foreground">
+          {formatMoney(totalCapital)}
+        </p>
+        <p className="mt-1 text-xs text-muted">
+          Used for Remaining capital on the dashboard
+          {usingEnvFallback
+            ? ` · env fallback ${formatMoney(getEnvCapitalFallback())} until contributions are logged`
+            : ""}
+        </p>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -167,13 +151,15 @@ export function CapitalClient({
       </div>
 
       {showForm ? (
-        <div className="rounded-lg border border-border bg-surface p-4 space-y-4">
+        <div className="space-y-4 rounded-lg border border-border bg-surface p-4">
           <h3 className="font-medium text-foreground">
             {editingId ? "Edit contribution" : "New contribution"}
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="cap-date">Date</label>
+              <label className="text-sm font-medium" htmlFor="cap-date">
+                Date
+              </label>
               <Input
                 id="cap-date"
                 type="date"
@@ -182,7 +168,9 @@ export function CapitalClient({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="cap-amount">Amount (SGD)</label>
+              <label className="text-sm font-medium" htmlFor="cap-amount">
+                Amount (SGD)
+              </label>
               <Input
                 id="cap-amount"
                 type="number"
@@ -193,7 +181,9 @@ export function CapitalClient({
               />
             </div>
             <div className="space-y-1 sm:col-span-2">
-              <label className="text-sm font-medium" htmlFor="cap-contributor">Contributor</label>
+              <label className="text-sm font-medium" htmlFor="cap-contributor">
+                Contributor
+              </label>
               <Input
                 id="cap-contributor"
                 placeholder="Who pumped in the cash"
@@ -202,7 +192,9 @@ export function CapitalClient({
               />
             </div>
             <div className="space-y-1 sm:col-span-2">
-              <label className="text-sm font-medium" htmlFor="cap-notes">Notes</label>
+              <label className="text-sm font-medium" htmlFor="cap-notes">
+                Notes
+              </label>
               <Textarea
                 id="cap-notes"
                 value={form.notes}

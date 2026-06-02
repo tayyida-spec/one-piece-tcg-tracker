@@ -173,7 +173,7 @@ export function MonthlyPlDashboard({
               <DisplayIdTable
                 category="bc"
                 title="BC — by transaction"
-                hint="Qty = cards in the deal (not buy+sell doubled) · Current price from Inventory · Amber = price older than 14 days · Unreal. ROI % = unrealized P/L ÷ unsold cost"
+                hint="Qty = cards in the deal (not buy+sell doubled) · Current market price from Inventory · Amber = price older than 14 days · Unreal. ROI % = unrealized P/L ÷ unsold cost"
                 rows={bcRows}
                 showUnrealized
                 showCurrentPrice
@@ -451,7 +451,7 @@ function DisplayIdTable({
             <th className="px-4 py-2 text-right">Realized P/L</th>
             <th className="px-4 py-2 text-right">ROI %</th>
             {!hideMargin ? <th className="px-4 py-2 text-right">Margin %</th> : null}
-            {showCurrentPrice ? <th className="px-4 py-2 text-right">Current price</th> : null}
+            {showCurrentPrice ? <th className="px-4 py-2 text-right">Current market price</th> : null}
             {showUnrealized ? <th className="px-4 py-2 text-right">Unrealized P/L</th> : null}
             {showUnrealized ? <th className="px-4 py-2 text-right">Unreal. ROI %</th> : null}
             <th className="px-4 py-2 text-right">Net cash</th>
