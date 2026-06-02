@@ -59,7 +59,9 @@ npx prisma db push
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3002](http://localhost:3002).
+
+If the page looks unstyled (plain HTML, no dark theme), stop the dev server and run `npm run dev:clean` to clear a stale `.next` cache.
 
 ### 4. First user & friends
 

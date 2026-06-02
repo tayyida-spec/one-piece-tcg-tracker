@@ -8,7 +8,8 @@ export default function LoginPage() {
       <Suspense fallback={null}>
         <SupabaseStatusBanner />
       </Suspense>
-      <h1 className="font-display text-xl font-semibold tracking-wide text-foreground">Sign in</h1>      <p className="mt-1 text-sm text-muted">Sign in with your account</p>
+      <h1 className="font-display text-xl font-semibold tracking-wide text-foreground">Sign in</h1>
+      <p className="mt-1 text-sm text-muted">Sign in with your account</p>
       <div className="mt-6">
         <LoginForm />
       </div>

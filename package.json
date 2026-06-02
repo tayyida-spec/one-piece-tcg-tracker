@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev",
+    "dev": "next dev -p 3002",
+    "dev:clean": "node -e \"require('fs').rmSync('.next',{recursive:true,force:true})\" && next dev -p 3002",
     "build": "prisma generate && next build",
     "db:bootstrap": "node scripts/apply-business-expense-migration.mjs && node scripts/apply-capital-migration.mjs && node scripts/seed-business-expenses.mjs && node scripts/seed-capital-contributions.mjs",
     "seed:capital": "node scripts/seed-capital-contributions.mjs",
