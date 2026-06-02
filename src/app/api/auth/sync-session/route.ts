@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import {
+  applyPersistPreferenceCookie,
   getSupabaseAuthStorageKey,
   isSupabaseAuthCookie,
   rememberMeCookieOptions,
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
       response.cookies.set(name, value, options);
     }
 
+    applyPersistPreferenceCookie(response, rememberMe);
     return response;
   } catch (e) {
     const message = e instanceof Error ? e.message : "Could not sync session";

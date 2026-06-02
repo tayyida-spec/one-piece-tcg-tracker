@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { z } from "zod";
 import {
+  applyPersistPreferenceCookie,
   parseCookieHeader,
   rememberMeCookieOptions,
 } from "@/lib/auth-cookies";
@@ -91,6 +92,7 @@ export async function POST(request: Request) {
       );
     }
 
+    applyPersistPreferenceCookie(response, rememberMe);
     return response;
   } catch (e) {
     const network = networkErrorMessage(e);

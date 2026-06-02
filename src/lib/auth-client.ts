@@ -18,14 +18,17 @@ function isNetworkFailure(err: unknown): boolean {
   );
 }
 
-async function syncSessionCookies(rememberMe: boolean): Promise<boolean> {
+async function syncSessionCookies(rememberMe: boolean): Promise<void> {
   const res = await fetch("/api/auth/sync-session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
     body: JSON.stringify({ rememberMe }),
   });
-  return res.ok;
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? "Could not save stay-signed-in preference. Try signing in again.");
+  }
 }
 
 /** Browser → Supabase (works when Node TLS is blocked on localhost). */
