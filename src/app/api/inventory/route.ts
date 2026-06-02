@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidateWorkspaceDashboard } from "@/lib/cache-tags";
+import { revalidateWorkspaceDashboard } from "@/lib/cache-revalidate";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { inventoryItemSchema } from "@/lib/validations";

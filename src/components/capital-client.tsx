@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SectionHeading } from "@/components/page-heading";
 import { formatDate, formatMoney } from "@/lib/utils";
 import type { CapitalContributionRow } from "@/lib/capital-data";
-import { getEnvCapitalFallback } from "@/lib/capital-data";
+import { getEnvCapitalFallback } from "@/lib/capital-constants";
 
 type FormState = {
   date: string;

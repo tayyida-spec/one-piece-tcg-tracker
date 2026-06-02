@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { businessExpenseSchema } from "@/lib/validations";
-import { revalidateWorkspaceExpenses } from "@/lib/cache-tags";
+import { revalidateWorkspaceExpenses } from "@/lib/cache-revalidate";
 import { isSchemaNotReadyError, SCHEMA_NOT_READY_MESSAGE } from "@/lib/safe-db";
 
 export async function GET() {
