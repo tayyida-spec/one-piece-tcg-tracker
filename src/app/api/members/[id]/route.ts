@@ -144,8 +144,46 @@ export async function PATCH(
     }
 
     return NextResponse.json({ error: message }, { status: 500 });
-
   }
+}
 
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { workspaceId, membership, user } = await requireUser();
+    if (membership.role !== "admin") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const target = await prisma.workspaceMember.findFirst({
+      where: { id, workspaceId },
+    });
+    if (!target) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    if (target.userId === user.id) {
+      return NextResponse.json({ error: "Cannot remove yourself" }, { status: 400 });
+    }
+
+    if (target.role === "admin") {
+      const adminCount = await prisma.workspaceMember.count({
+        where: { workspaceId, role: "admin" },
+      });
+      if (adminCount <= 1) {
+        return NextResponse.json({ error: "Cannot remove the last admin" }, { status: 400 });
+      }
+    }
+
+    await prisma.workspaceMember.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Error";
+    if (message === "Unauthorized") {
+      return NextResponse.json({ error: message }, { status: 401 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
