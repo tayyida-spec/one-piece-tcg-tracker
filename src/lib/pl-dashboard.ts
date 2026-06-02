@@ -4,7 +4,6 @@
  */
 
 import { batchCategory, BATCH_LABELS, type TransactionBatchCategory } from "@/lib/transaction-codes";
-import { getWorkspaceTotalCapital } from "@/lib/workspace-capital";
 
 export type { TransactionBatchCategory };
 
@@ -72,6 +71,8 @@ export type DisplayIdPlRow = {
   marginPct: number | null;
   /** BC only — current market price per card from inventory */
   currentMarketPrice?: number | null;
+  /** BC only — when current market price was last set in Inventory */
+  marketPriceUpdatedAt?: string | null;
   /** BC only — unsold portion at current market vs buy cost */
   unrealizedPl?: number;
   /** BC only — unrealized P/L ÷ remaining cost basis (potential ROI on unsold). */
@@ -93,6 +94,7 @@ export type PlInventoryInput = {
   quantity: number;
   purchasePrice: number | null;
   currentMarketPrice: number | null;
+  marketPriceUpdatedAt: string | null;
   status: string;
 };
 
@@ -262,10 +264,10 @@ export function bcCurrentMarketPriceForDisplayId(
   displayId: string,
   allLines: PlLineInput[],
   inventoryById: Map<string, PlInventoryInput>
-): Pick<DisplayIdPlRow, "currentMarketPrice" | "hasMarketPrice"> {
+): Pick<DisplayIdPlRow, "currentMarketPrice" | "hasMarketPrice" | "marketPriceUpdatedAt"> {
   const groupLines = allLines.filter((l) => l.displayId === displayId);
   if (batchCategory(displayId) !== "bc" || groupLines.length === 0) {
-    return { currentMarketPrice: null, hasMarketPrice: false };
+    return { currentMarketPrice: null, hasMarketPrice: false, marketPriceUpdatedAt: null };
   }
 
   for (const line of groupLines) {
@@ -275,6 +277,7 @@ export function bcCurrentMarketPriceForDisplayId(
       return {
         currentMarketPrice: round2(inv.currentMarketPrice),
         hasMarketPrice: true,
+        marketPriceUpdatedAt: inv.marketPriceUpdatedAt,
       };
     }
   }
@@ -288,12 +291,13 @@ export function bcCurrentMarketPriceForDisplayId(
         return {
           currentMarketPrice: round2(inv.currentMarketPrice),
           hasMarketPrice: true,
+          marketPriceUpdatedAt: inv.marketPriceUpdatedAt,
         };
       }
     }
   }
 
-  return { currentMarketPrice: null, hasMarketPrice: false };
+  return { currentMarketPrice: null, hasMarketPrice: false, marketPriceUpdatedAt: null };
 }
 
 /** Unrealized P/L for a BC### batch — remaining buy qty × (market − cost). */
@@ -587,7 +591,8 @@ export function realizedPlForSellLine(line: PlLineInput, allLines: PlLineInput[]
 export function buildPlDashboard(
   lines: PlLineInput[],
   inventory: PlInventoryInput[],
-  businessExpensesTotal = 0
+  businessExpensesTotal = 0,
+  workspaceTotalCapital = 5000
 ): PlDashboardData {
   const inventoryById = new Map(inventory.map((item) => [item.id, item]));
   const monthMap = new Map<
@@ -668,7 +673,6 @@ export function buildPlDashboard(
   const realizedPlAll = round2(
     breakdownByDisplayId(lines).reduce((s, r) => s + r.realizedPl, 0)
   );
-  const workspaceTotalCapital = getWorkspaceTotalCapital();
   const tiedUpInStock = round2(totalBuySpend - soldCostBasis);
   const remainingCapital = round2(
     workspaceTotalCapital - businessExpensesTotal - totalBuySpend + totalSellRevenue

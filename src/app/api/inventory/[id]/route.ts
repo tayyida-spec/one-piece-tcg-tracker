@@ -3,6 +3,7 @@ import { revalidateWorkspaceDashboard } from "@/lib/cache-tags";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { inventoryItemSchema } from "@/lib/validations";
+import { marketPriceUpdateFields } from "@/lib/inventory-market-price";
 
 export async function GET(
   _request: Request,
@@ -42,10 +43,16 @@ export async function PATCH(
 
     const data = parsed.data;
     const qty = data.quantity ?? Number(existing.quantity);
+    const priceFields =
+      data.currentMarketPrice !== undefined
+        ? marketPriceUpdateFields(existing.currentMarketPrice, data.currentMarketPrice)
+        : {};
+
     const item = await prisma.inventoryItem.update({
       where: { id },
       data: {
         ...data,
+        ...priceFields,
         photoUrl: data.photoUrl === "" ? null : data.photoUrl,
         status: qty > 0 ? "in_stock" : (data.status ?? "sold_out"),
       },

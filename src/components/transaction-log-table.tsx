@@ -45,7 +45,13 @@ function lineTotal(row: TransactionLogRow) {
   return row.quantity * row.unitPrice + smartpac;
 }
 
-export function TransactionLogTable({ rows }: { rows: TransactionLogRow[] }) {
+export function TransactionLogTable({
+  rows,
+  onMutated,
+}: {
+  rows: TransactionLogRow[];
+  onMutated?: () => void | Promise<void>;
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState<TransactionLogRow | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -219,6 +225,7 @@ export function TransactionLogTable({ rows }: { rows: TransactionLogRow[] }) {
     }
 
     setEditing(null);
+    await onMutated?.();
     router.refresh();
   }
 
@@ -227,6 +234,7 @@ export function TransactionLogTable({ rows }: { rows: TransactionLogRow[] }) {
     const res = await fetch(`/api/transaction-lines/${row.id}`, { method: "DELETE" });
     if (res.ok) {
       setEditing(null);
+      await onMutated?.();
       router.refresh();
     }
   }

@@ -8,6 +8,7 @@ import {
 } from "@/lib/pl-dashboard";
 import { dashboardCacheTag } from "@/lib/cache-tags";
 import { loadExpensesSafe } from "@/lib/safe-db";
+import { getWorkspaceTotalCapital } from "@/lib/capital-data";
 
 export type ExpenseSummary = {
   total: number;
@@ -33,7 +34,7 @@ export type DashboardPayload = {
 };
 
 async function loadDashboardPayload(workspaceId: string): Promise<DashboardPayload> {
-  const [transactionCount, inventoryCount, recentTransactions, lines, inventoryItems, expenses] =
+  const [transactionCount, inventoryCount, recentTransactions, lines, inventoryItems, expenses, workspaceTotalCapital] =
     await Promise.all([
       prisma.transaction.count({ where: { workspaceId } }),
       prisma.inventoryItem.count({ where: { workspaceId } }),
@@ -64,10 +65,12 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
           quantity: true,
           purchasePrice: true,
           currentMarketPrice: true,
+          marketPriceUpdatedAt: true,
           status: true,
         },
       }),
       loadExpensesSafe(workspaceId),
+      getWorkspaceTotalCapital(workspaceId),
     ]);
 
   const plLines: PlLineInput[] = lines.map((line) => ({
@@ -105,6 +108,7 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
     purchasePrice: i.purchasePrice != null ? Number(i.purchasePrice) : null,
     currentMarketPrice:
       i.currentMarketPrice != null ? Number(i.currentMarketPrice) : null,
+    marketPriceUpdatedAt: i.marketPriceUpdatedAt?.toISOString() ?? null,
     status: i.status,
   }));
 
@@ -124,7 +128,7 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
       .sort((a, b) => b.amount - a.amount),
   };
 
-  const plData = buildPlDashboard(plLines, inventorySnapshot, expenseSummary.total);
+  const plData = buildPlDashboard(plLines, inventorySnapshot, expenseSummary.total, workspaceTotalCapital);
 
   return {
     transactionCount,

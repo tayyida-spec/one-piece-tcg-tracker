@@ -15,6 +15,7 @@ import { formatDisplayIdLabel } from "@/lib/pl-dashboard";
 import { BatchBadge } from "@/components/batch-badge";
 import { SectionHeading } from "@/components/page-heading";
 import { cn, formatMoney } from "@/lib/utils";
+import { priceFreshness } from "@/lib/price-freshness";
 import type { TransactionBatchCategory } from "@/lib/transaction-codes";
 import { Select } from "@/components/ui/select";
 import {
@@ -172,7 +173,7 @@ export function MonthlyPlDashboard({
               <DisplayIdTable
                 category="bc"
                 title="BC — by transaction"
-                hint="Qty = cards in the deal (not buy+sell doubled) · Current price from Inventory · Unreal. ROI % = unrealized P/L ÷ unsold cost"
+                hint="Qty = cards in the deal (not buy+sell doubled) · Current price from Inventory · Amber = price older than 14 days · Unreal. ROI % = unrealized P/L ÷ unsold cost"
                 rows={bcRows}
                 showUnrealized
                 showCurrentPrice
@@ -504,7 +505,27 @@ function DisplayIdTable({
 
 function CurrentPriceCell({ row }: { row: DisplayIdPlRow }) {
   if (row.currentMarketPrice != null && row.currentMarketPrice > 0) {
-    return <span className="text-foreground">{formatMoney(row.currentMarketPrice)}</span>;
+    const fresh = priceFreshness(row.marketPriceUpdatedAt);
+    return (
+      <div className="flex flex-col items-end gap-0.5">
+        <span className="text-foreground">{formatMoney(row.currentMarketPrice)}</span>
+        {fresh ? (
+          <span
+            className={cn(
+              "text-[10px] leading-tight",
+              fresh.stale ? "text-amber-600 dark:text-amber-400" : "text-muted"
+            )}
+            title={
+              fresh.stale
+                ? "Market price may be outdated — update in Inventory"
+                : "Last updated in Inventory"
+            }
+          >
+            {fresh.label}
+          </span>
+        ) : null}
+      </div>
+    );
   }
   return (
     <span className="text-muted" title="Set current market price in Inventory">

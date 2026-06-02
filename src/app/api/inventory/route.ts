@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { inventoryItemSchema } from "@/lib/validations";
 import { normalizeIdentity } from "@/lib/inventory-identity";
+import { marketPriceUpdateFields } from "@/lib/inventory-market-price";
 
 export async function GET(request: Request) {
   try {
@@ -56,13 +57,21 @@ export async function POST(request: Request) {
       language: data.language,
     });
 
-    const item = await prisma.inventoryItem.upsert({
-      where: {
-        workspaceId_itemType_cardId_series_rarity_variant_language: {
-          workspaceId,
-          ...identity,
-        },
+    const whereUnique = {
+      workspaceId_itemType_cardId_series_rarity_variant_language: {
+        workspaceId,
+        ...identity,
       },
+    };
+
+    const existing = await prisma.inventoryItem.findUnique({ where: whereUnique });
+    const priceFields = marketPriceUpdateFields(
+      existing?.currentMarketPrice != null ? Number(existing.currentMarketPrice) : null,
+      data.currentMarketPrice ?? null
+    );
+
+    const item = await prisma.inventoryItem.upsert({
+      where: whereUnique,
       create: {
         workspaceId,
         ...identity,
@@ -72,6 +81,7 @@ export async function POST(request: Request) {
         location: data.location ?? null,
         purchasePrice: data.purchasePrice ?? null,
         currentMarketPrice: data.currentMarketPrice ?? null,
+        ...priceFields,
         owner: data.owner ?? null,
         notes: data.notes ?? null,
         photoUrl: data.photoUrl || null,
@@ -84,6 +94,7 @@ export async function POST(request: Request) {
         location: data.location ?? null,
         purchasePrice: data.purchasePrice ?? null,
         currentMarketPrice: data.currentMarketPrice ?? null,
+        ...priceFields,
         owner: data.owner ?? null,
         notes: data.notes ?? null,
         photoUrl: data.photoUrl || null,

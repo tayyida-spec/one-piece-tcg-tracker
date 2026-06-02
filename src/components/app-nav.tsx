@@ -15,6 +15,8 @@ const links = [
   { href: "/transactions", label: "Transactions" },
   { href: "/quick-add", label: "Quick add" },
   { href: "/business-expenses", label: "Expenses" },
+  { href: "/capital", label: "Capital" },
+  { href: "/members", label: "Members" },
   { href: "/profile", label: "Profile" },
 ];
 

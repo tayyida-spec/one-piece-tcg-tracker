@@ -91,6 +91,22 @@ export const dashboardPrefsSchema = z.object({
   order: z.array(z.string()).max(50).optional(),
 });
 
+export const capitalContributionSchema = z.object({
+  date: z.string().min(1, "Date is required"),
+  amount: z.coerce.number().positive("Amount must be greater than 0"),
+  contributor: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export const memberUpdateSchema = z.object({
+  displayName: z
+    .string()
+    .max(80)
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim() : null)),
+  role: z.enum(["admin", "member"]).optional(),
+});
+
 export const profileUpdateSchema = z.object({
   displayName: z
     .string()
