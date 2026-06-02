@@ -60,12 +60,13 @@ export type DisplayIdPlRow = {
   category: TransactionBatchCategory;
   buyTotal: number;
   sellTotal: number;
-  realizedPl: number;
+  /** null for BC batches with no sales yet (open positions). */
+  realizedPl: number | null;
   netCashFlow: number;
   lineCount: number;
   /** Card quantity for this batch (BC: max of buy/sell qty, not summed). */
   qtyTraded: number;
-  /** Realized P/L ÷ purchases (profit on cost). null when no purchases. */
+  /** Realized P/L ÷ purchases (profit on cost). null when no purchases or no BC sales. */
   roiPct: number | null;
   /** Realized P/L ÷ sales (profit margin). null when no sales. */
   marginPct: number | null;
@@ -193,7 +194,7 @@ export function batchPlForDisplayId(
   const cat = batchCategory(displayId);
   let buyTotal = 0;
   let sellTotal = 0;
-  let realizedPl = 0;
+  let realizedPl: number | null = 0;
 
   if (cat === "txn" || cat === "bc") {
     for (const line of groupLines) {
@@ -202,7 +203,11 @@ export function batchPlForDisplayId(
       if (type === "buy") buyTotal += amount;
       else if (type === "sell") sellTotal += amount;
     }
-    realizedPl = sellTotal - buyTotal;
+    if (cat === "bc") {
+      realizedPl = sellTotal > 0 ? round2(sellTotal - buyTotal) : null;
+    } else {
+      realizedPl = round2(sellTotal - buyTotal);
+    }
   } else {
     for (const line of groupLines) {
       const amount = lineAmount(line.quantity, line.unitPrice);
@@ -223,12 +228,14 @@ export function batchPlForDisplayId(
     category: cat,
     buyTotal: round2(buyTotal),
     sellTotal: round2(sellTotal),
-    realizedPl: round2(realizedPl),
+    realizedPl: realizedPl == null ? null : round2(realizedPl),
     netCashFlow: round2(sellTotal - buyTotal),
     lineCount: groupLines.length,
     qtyTraded,
-    roiPct: buyTotal > 0 ? round2((realizedPl / buyTotal) * 100) : null,
-    marginPct: sellTotal > 0 ? round2((realizedPl / sellTotal) * 100) : null,
+    roiPct:
+      realizedPl != null && buyTotal > 0 ? round2((realizedPl / buyTotal) * 100) : null,
+    marginPct:
+      realizedPl != null && sellTotal > 0 ? round2((realizedPl / sellTotal) * 100) : null,
   };
 
   if (cat === "bc" && inventoryById) {
@@ -479,7 +486,7 @@ export function breakdownByBatchCategory(
 
       const buyTotal = round2(rows.reduce((s, r) => s + r.buyTotal, 0));
       const sellTotal = round2(rows.reduce((s, r) => s + r.sellTotal, 0));
-      const realizedPl = round2(rows.reduce((s, r) => s + r.realizedPl, 0));
+      const realizedPl = round2(rows.reduce((s, r) => s + (r.realizedPl ?? 0), 0));
       const unrealizedPl =
         category === "bc"
           ? round2(rows.reduce((s, r) => s + (r.unrealizedPl ?? 0), 0))
@@ -626,7 +633,7 @@ export function buildPlDashboard(
     .map(([month, b]) => {
       const monthLines = lines.filter((l) => monthKey(l.date) === month);
       const realizedPl = round2(
-        breakdownByDisplayId(monthLines, month).reduce((s, r) => s + r.realizedPl, 0)
+        breakdownByDisplayId(monthLines, month).reduce((s, r) => s + (r.realizedPl ?? 0), 0)
       );
 
       return {
@@ -671,7 +678,7 @@ export function buildPlDashboard(
   }
 
   const realizedPlAll = round2(
-    breakdownByDisplayId(lines).reduce((s, r) => s + r.realizedPl, 0)
+    breakdownByDisplayId(lines).reduce((s, r) => s + (r.realizedPl ?? 0), 0)
   );
   const tiedUpInStock = round2(totalBuySpend - soldCostBasis);
   const remainingCapital = round2(

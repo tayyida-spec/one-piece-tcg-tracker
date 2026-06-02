@@ -467,7 +467,7 @@ function DisplayIdTable({
               <td className="px-4 py-2 text-right tabular-nums">{formatMoney(r.buyTotal)}</td>
               <td className="px-4 py-2 text-right tabular-nums">{formatMoney(r.sellTotal)}</td>
               <td className="px-4 py-2 text-right tabular-nums">
-                <PlValue value={r.realizedPl} />
+                <RealizedPlCell value={r.realizedPl} />
               </td>
               <td className="px-4 py-2 text-right tabular-nums">
                 <PctValue value={r.roiPct} />
@@ -532,6 +532,11 @@ function CurrentPriceCell({ row }: { row: DisplayIdPlRow }) {
       —
     </span>
   );
+}
+
+function RealizedPlCell({ value }: { value: number | null }) {
+  if (value == null) return <span className="text-muted">—</span>;
+  return <PlValue value={value} />;
 }
 
 function UnrealizedCell({ row }: { row: DisplayIdPlRow }) {
