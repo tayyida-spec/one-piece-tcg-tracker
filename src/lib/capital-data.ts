@@ -1,12 +1,13 @@
+import "server-only";
+
 import { unstable_cache } from "next/cache";
-
 import { prisma } from "@/lib/prisma";
-
 import { isSchemaNotReadyError } from "@/lib/safe-db";
-
 import { capitalCacheTag } from "@/lib/cache-tags";
 import { getEnvCapitalFallback } from "@/lib/capital-constants";
+import type { CapitalContributionRow } from "@/lib/capital-types";
 
+export type { CapitalContributionRow };
 async function sumCapitalContributions(workspaceId: string): Promise<number | null> {
 
   try {
@@ -46,31 +47,9 @@ export async function getWorkspaceTotalCapital(workspaceId: string): Promise<num
   if (sum != null) return Math.round(sum * 100) / 100;
 
   return getEnvCapitalFallback();
-
 }
 
-
-
-export type CapitalContributionRow = {
-
-  id: string;
-
-  date: string;
-
-  amount: number;
-
-  contributor: string | null;
-
-  notes: string | null;
-
-  createdAt: string;
-
-};
-
-
-
 async function loadCapitalRows(workspaceId: string): Promise<CapitalContributionRow[]> {
-
   try {
 
     const rows = await prisma.capitalContribution.findMany({

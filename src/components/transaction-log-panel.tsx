@@ -7,7 +7,7 @@ import {
   TransactionLogTable,
   type TransactionLogRow,
 } from "@/components/transaction-log-table";
-import type { TransactionLogPage } from "@/lib/transactions-data";
+import type { TransactionLogPage } from "@/lib/transaction-log-types";
 
 type Props = {
   initialPage: TransactionLogPage;

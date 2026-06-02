@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { SectionHeading } from "@/components/page-heading";
 import { formatDate, formatMoney } from "@/lib/utils";
-import type { CapitalContributionRow } from "@/lib/capital-data";
+import type { CapitalContributionRow } from "@/lib/capital-types";
 import { getEnvCapitalFallback } from "@/lib/capital-constants";
 
 type FormState = {
