@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { FilterableTable, type TableColumn } from "@/components/filterable-table";
-import { displayItemType, formatMoney } from "@/lib/utils";
+import { displayInventoryStatus, formatMoney } from "@/lib/utils";
+
+function displayInventoryType(itemType: string) {
+  const t = itemType.toLowerCase();
+  if (t === "sealed" || t === "case") return "Sealed";
+  if (t === "merchandise") return "Merchandise";
+  return "Cards";
+}
 
 export type InventoryRow = {
   id: string;
@@ -23,15 +30,21 @@ export type InventoryRow = {
   notes: string | null;
 };
 
-function displayStatus(status: string) {
-  return status === "in_stock" ? "In stock" : "Sold out";
+function statusClassName(status: string) {
+  if (status === "in_stock") {
+    return "rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-success";
+  }
+  if (status === "cracked") {
+    return "rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-800";
+  }
+  return "rounded-full bg-brand-dim px-2 py-0.5 text-xs text-brand";
 }
 
 const columns: TableColumn<InventoryRow>[] = [
   {
     header: "Type",
-    accessor: (r) => displayItemType(r.itemType),
-    render: (r) => displayItemType(r.itemType),
+    accessor: (r) => displayInventoryType(r.itemType),
+    render: (r) => displayInventoryType(r.itemType),
   },
   {
     header: "Card",
@@ -102,17 +115,9 @@ const columns: TableColumn<InventoryRow>[] = [
   },
   {
     header: "Status",
-    accessor: (r) => displayStatus(r.status),
+    accessor: (r) => displayInventoryStatus(r.status),
     render: (r) => (
-      <span
-        className={
-          r.status === "in_stock"
-            ? "rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-success"
-            : "rounded-full bg-brand-dim px-2 py-0.5 text-xs text-brand"
-        }
-      >
-        {displayStatus(r.status)}
-      </span>
+      <span className={statusClassName(r.status)}>{displayInventoryStatus(r.status)}</span>
     ),
   },
   {

@@ -8,8 +8,10 @@ export type InventoryIdentity = {
 };
 
 export function normalizeIdentity(input: Partial<InventoryIdentity>): InventoryIdentity {
+  let itemType = (input.itemType ?? "card").trim().toLowerCase();
+  if (itemType === "case") itemType = "sealed";
   return {
-    itemType: (input.itemType ?? "card").trim().toLowerCase(),
+    itemType,
     cardId: (input.cardId ?? "").trim(),
     series: (input.series ?? "").trim(),
     rarity: (input.rarity ?? "").trim(),

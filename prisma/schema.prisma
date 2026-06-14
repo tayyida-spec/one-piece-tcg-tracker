@@ -19,6 +19,7 @@ model Workspace {
   cardCatalog    CardCatalogEntry[]
   businessExpenses BusinessExpense[]
   capitalContributions CapitalContribution[]
+  cardPriceEntries CardPriceEntry[]
 }
 
 model WorkspaceMember {
@@ -147,6 +148,28 @@ model CapitalContribution {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, date])
+}
+
+model CardPriceEntry {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  itemType         String    @default("card")
+  cardName         String
+  cardId           String
+  series           String    @default("")
+  rarity           String    @default("")
+  language         String    @default("JP")
+  variant          String    @default("")
+  marketPriceSgd   Decimal?  @db.Decimal(12, 2)
+  priceUpdatedAt   DateTime?
+  inventoryItemId  String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, itemType, cardId, series, rarity, variant, language])
+  @@index([workspaceId, cardName])
+  @@index([workspaceId, series])
 }
 
 model CardCatalogEntry {

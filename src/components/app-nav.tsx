@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button";
 const links = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/inventory", label: "Inventory" },
+  { href: "/card-prices", label: "Price list" },
   { href: "/transactions", label: "Transactions" },
   { href: "/quick-add", label: "Quick add" },
+  { href: "/case-crack", label: "Case crack" },
   { href: "/business-expenses", label: "Expenses" },
   { href: "/capital", label: "Capital" },
   { href: "/members", label: "Members" },

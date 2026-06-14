@@ -3,7 +3,25 @@ import { prisma } from "@/lib/prisma";
 import type { InventoryRow } from "@/components/inventory-table";
 import { inventoryCacheTag } from "@/lib/cache-tags";
 
+/** Fix cases that were decremented to sold_out/qty 0 by the old crack flow. */
+async function repairMisclassifiedCrackedCases(workspaceId: string) {
+  await prisma.inventoryItem.updateMany({
+    where: {
+      workspaceId,
+      itemType: { in: ["sealed", "case"] },
+      status: "sold_out",
+      quantity: { lte: 0 },
+      notes: { contains: "Case crack", mode: "insensitive" },
+    },
+    data: {
+      status: "cracked",
+      quantity: 1,
+    },
+  });
+}
+
 async function loadInventoryRows(workspaceId: string): Promise<InventoryRow[]> {
+  await repairMisclassifiedCrackedCases(workspaceId);
   const items = await prisma.inventoryItem.findMany({
     where: { workspaceId },
     orderBy: [{ status: "asc" }, { cardName: "asc" }],
@@ -54,3 +72,6 @@ export function getCachedInventoryRows(workspaceId: string) {
     { revalidate: 120, tags: [inventoryCacheTag(workspaceId)] }
   )();
 }
+
+/** Fresh inventory list (no cache) — use on Inventory page so new rows show immediately. */
+export { loadInventoryRows };

@@ -14,20 +14,13 @@ export function formatMoney(value: number | string | null | undefined) {
   }).format(n);
 }
 
-export function formatDate(value: Date | string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(d);
-}
-
-/** Display format for table cells (matches {@link formatDate}). */
-export function formatExcelDate(value: Date | string) {
-  return formatDate(value);
-}
+export {
+  formatDate,
+  formatExcelDate,
+  todayDisplayDate,
+  toIsoDateString,
+  isoToDisplayDate,
+} from "@/lib/date-format";
 
 export function formatExcelNumber(value: number | string | null | undefined) {
   const n = Number(value ?? 0);
@@ -40,6 +33,19 @@ export function displayItemType(itemType: string) {
   if (t === "sealed" || t === "case") return "Case";
   if (t === "merchandise") return "Merchandise";
   return "Cards";
+}
+
+export function displayInventoryStatus(status: string) {
+  switch (status) {
+    case "in_stock":
+      return "In stock";
+    case "cracked":
+      return "Cracked";
+    case "sold_out":
+      return "Sold out";
+    default:
+      return status;
+  }
 }
 
 export function displayTransactionType(type: string) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidateWorkspaceDashboard } from "@/lib/cache-revalidate";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recalcInventoryPurchasePrice } from "@/lib/inventory-cost-sync";
 
 export async function GET(
   _request: Request,
@@ -37,6 +38,14 @@ export async function DELETE(
     });
     if (!transaction) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    const inventoryIds = [
+      ...new Set(
+        transaction.lines
+          .map((line) => line.inventoryItemId)
+          .filter((id): id is string => id != null)
+      ),
+    ];
+
     await prisma.$transaction(async (tx) => {
       for (const line of transaction.lines) {
         if (!line.inventoryItemId) continue;
@@ -63,6 +72,10 @@ export async function DELETE(
       }
       await tx.transaction.delete({ where: { id } });
     });
+
+    for (const inventoryItemId of inventoryIds) {
+      await recalcInventoryPurchasePrice(inventoryItemId);
+    }
 
     revalidateWorkspaceDashboard(workspaceId);
     return NextResponse.json({ ok: true });

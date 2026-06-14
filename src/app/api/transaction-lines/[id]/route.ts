@@ -4,6 +4,8 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { transactionLineEditSchema } from "@/lib/validations";
 import { buildTransactionImportKey } from "@/lib/transaction-import-key";
+import { recalcInventoryPurchasePrice } from "@/lib/inventory-cost-sync";
+import { parseApiDate, toIsoDateString } from "@/lib/date-format";
 
 export async function PATCH(
   request: Request,
@@ -29,11 +31,16 @@ export async function PATCH(
     }
 
     const data = parsed.data;
+    const isoDate = toIsoDateString(data.date);
+    if (!isoDate) {
+      return NextResponse.json({ error: "Invalid date — use DD/MM/YYYY" }, { status: 400 });
+    }
+
     const itemType =
       data.itemType === "case" ? "sealed" : data.itemType === "card" ? "card" : data.itemType;
     const importKey = buildTransactionImportKey(
       data.displayId,
-      data.date,
+      isoDate,
       data.transactionType
     );
 
@@ -72,12 +79,16 @@ export async function PATCH(
             displayId: data.displayId,
             importKey,
             transactionType: data.transactionType,
-            date: new Date(data.date),
+            date: parseApiDate(isoDate),
           },
         },
       },
       include: { transaction: true },
     });
+
+    if (existing.inventoryItemId) {
+      await recalcInventoryPurchasePrice(existing.inventoryItemId);
+    }
 
     revalidateWorkspaceDashboard(workspaceId);
     return NextResponse.json(line);
@@ -104,10 +115,16 @@ export async function DELETE(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    const inventoryItemId = existing.inventoryItemId;
+
     await prisma.transactionLine.delete({ where: { id } });
 
     if (existing.transaction.lines.length <= 1) {
       await prisma.transaction.delete({ where: { id: existing.transactionId } });
+    }
+
+    if (inventoryItemId) {
+      await recalcInventoryPurchasePrice(inventoryItemId);
     }
 
     revalidateWorkspaceDashboard(workspaceId);

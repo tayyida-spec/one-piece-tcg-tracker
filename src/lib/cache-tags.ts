@@ -17,3 +17,7 @@ export function expensesCacheTag(workspaceId: string) {
 export function capitalCacheTag(workspaceId: string) {
   return `capital-${workspaceId}`;
 }
+
+export function cardPricesCacheTag(workspaceId: string) {
+  return `card-prices-${workspaceId}`;
+}

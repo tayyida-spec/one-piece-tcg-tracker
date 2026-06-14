@@ -48,13 +48,17 @@ export async function PATCH(
         ? marketPriceUpdateFields(existing.currentMarketPrice, data.currentMarketPrice)
         : {};
 
+    const status =
+      data.status ??
+      (qty <= 0 ? "sold_out" : existing.status === "cracked" ? "cracked" : "in_stock");
+
     const item = await prisma.inventoryItem.update({
       where: { id },
       data: {
         ...data,
         ...priceFields,
         photoUrl: data.photoUrl === "" ? null : data.photoUrl,
-        status: qty > 0 ? "in_stock" : (data.status ?? "sold_out"),
+        status,
       },
     });
 

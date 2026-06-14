@@ -16,6 +16,7 @@ import {
   formatMoney,
 } from "@/lib/utils";
 import { TRANSACTION_ID_HINT } from "@/lib/transaction-codes";
+import { DateInput } from "@/components/date-input";
 
 export type TransactionLogRow = {
   id: string;
@@ -265,14 +266,12 @@ export function TransactionLogTable({
                   <p className="text-xs text-muted">{TRANSACTION_ID_HINT}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="date">Date (DD/MM/YYYY)</Label>
-                  <Input
+                  <Label htmlFor="date">Date</Label>
+                  <DateInput
                     id="date"
                     name="date"
-                    type="date"
-                    lang="en-GB"
                     required
-                    defaultValue={editing.transaction.date.slice(0, 10)}
+                    defaultValue={editing.transaction.date}
                   />
                 </div>
               </div>

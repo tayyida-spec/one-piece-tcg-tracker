@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DateInput } from "@/components/date-input";
+import { todayDisplayDate } from "@/lib/date-format";
 import { TRANSACTION_ID_HINT } from "@/lib/transaction-codes";
 
 export function TransactionForm({ compact = false }: { compact?: boolean }) {
@@ -14,7 +16,7 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDisplayDate();
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -85,15 +87,8 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="date">Date (DD/MM/YYYY)</Label>
-          <Input
-            id="date"
-            name="date"
-            type="date"
-            lang="en-GB"
-            required
-            defaultValue={today}
-          />
+          <Label htmlFor="date">Date</Label>
+          <DateInput id="date" name="date" defaultValue={today} required />
         </div>
       </div>
 

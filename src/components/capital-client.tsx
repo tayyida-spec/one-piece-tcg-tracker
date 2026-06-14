@@ -6,8 +6,10 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DateInput } from "@/components/date-input";
 import { SectionHeading } from "@/components/page-heading";
 import { formatDate, formatMoney } from "@/lib/utils";
+import { isoToDisplayDate, todayDisplayDate } from "@/lib/date-format";
 import type { CapitalContributionRow } from "@/lib/capital-types";
 import { getEnvCapitalFallback } from "@/lib/capital-constants";
 
@@ -20,7 +22,7 @@ type FormState = {
 
 function emptyForm(): FormState {
   return {
-    date: new Date().toISOString().slice(0, 10),
+    date: todayDisplayDate(),
     amount: "",
     contributor: "",
     notes: "",
@@ -29,7 +31,7 @@ function emptyForm(): FormState {
 
 function rowToForm(row: CapitalContributionRow): FormState {
   return {
-    date: row.date.slice(0, 10),
+    date: isoToDisplayDate(row.date.slice(0, 10)),
     amount: String(row.amount),
     contributor: row.contributor ?? "",
     notes: row.notes ?? "",
@@ -160,11 +162,10 @@ export function CapitalClient({
               <label className="text-sm font-medium" htmlFor="cap-date">
                 Date
               </label>
-              <Input
+              <DateInput
                 id="cap-date"
-                type="date"
                 value={form.date}
-                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                onChange={(date) => setForm((f) => ({ ...f, date }))}
               />
             </div>
             <div className="space-y-1">

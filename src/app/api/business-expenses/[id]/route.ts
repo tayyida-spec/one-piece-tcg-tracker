@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { businessExpenseSchema } from "@/lib/validations";
 import { revalidateWorkspaceExpenses } from "@/lib/cache-revalidate";
 import { isSchemaNotReadyError, SCHEMA_NOT_READY_MESSAGE } from "@/lib/safe-db";
+import { parseApiDate, toIsoDateString } from "@/lib/date-format";
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,6 +22,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
 
     const d = parsed.data;
+    const isoDate = toIsoDateString(d.date);
+    if (!isoDate) {
+      return NextResponse.json({ error: "Invalid date — use DD/MM/YYYY" }, { status: 400 });
+    }
     const updated = await prisma.businessExpense.update({
       where: { id },
       data: {
@@ -28,7 +33,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         category: d.category,
         itemName: d.itemName,
         vendor: d.vendor?.trim() || null,
-        date: new Date(d.date),
+        date: parseApiDate(isoDate),
         amount: d.amount,
         paymentMethod: d.paymentMethod?.trim() || null,
         recurring: d.recurring ?? false,

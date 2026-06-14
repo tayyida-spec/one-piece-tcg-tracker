@@ -21,7 +21,7 @@ export const inventoryItemSchema = z.object({
     .nullable()
     .transform((v) => (v && v.trim() ? v.trim() : null))
     .refine((v) => v === null || /^https?:\/\//.test(v), "Photo URL must be http(s)"),
-  status: z.enum(["in_stock", "sold_out"]).optional(),
+  status: z.enum(["in_stock", "sold_out", "cracked"]).optional(),
 });
 
 export const transactionLineSchema = z.object({
@@ -151,4 +151,23 @@ export const transactionSchema = z.object({
   smartpacFee: z.coerce.number().optional().nullable(),
   notes: z.string().optional().nullable(),
   lines: z.array(transactionLineSchema).min(1),
+});
+
+/** One pulled card when cracking a sealed case — inventory only, no unit price. */
+export const caseCrackLineSchema = z.object({
+  cardName: z.string().min(1, "Card name is required"),
+  cardId: z.string().default(""),
+  series: z.string().default(""),
+  rarity: z.string().default(""),
+  variant: z.string().default(""),
+  language: z.string().default("JP"),
+  quantity: z.coerce.number().positive().default(1),
+  notes: z.string().optional().nullable(),
+});
+
+export const caseCrackSchema = z.object({
+  sealedItemId: z.string().min(1, "Select a case"),
+  referenceTxn: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  lines: z.array(caseCrackLineSchema).min(1, "Add at least one card"),
 });

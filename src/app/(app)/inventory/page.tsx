@@ -1,16 +1,18 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/auth";
-import { getCachedInventoryRows } from "@/lib/inventory-data";
+import { loadInventoryRows } from "@/lib/inventory-data";
 import { Button } from "@/components/ui/button";
 import { InventoryTable } from "@/components/inventory-table";
 import { ExportExcelButton } from "@/components/export-excel-button";
 import { PageHeading } from "@/components/page-heading";
 import { TableSectionSkeleton } from "@/components/table-section-skeleton";
 
+export const dynamic = "force-dynamic";
+
 async function InventoryTableSection() {
   const { workspaceId } = await requireUser();
-  const rows = await getCachedInventoryRows(workspaceId);
+  const rows = await loadInventoryRows(workspaceId);
   return <InventoryTable rows={rows} />;
 }
 
@@ -20,7 +22,7 @@ export default function InventoryPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageHeading
           title="Inventory"
-          description="Filter any column — type in the box below each header"
+          description="Live stock list — new sealed cases show immediately; use “Log as transaction” when adding a case if you want it on the Transaction Log"
         />
         <div className="flex flex-wrap gap-2">
           <ExportExcelButton />

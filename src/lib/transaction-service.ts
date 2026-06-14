@@ -6,8 +6,10 @@ import {
   findOrCreateInventoryItem,
   nextTransactionDisplayId,
 } from "@/lib/inventory-service";
+import { recalcInventoryPurchasePrice } from "@/lib/inventory-cost-sync";
 import { buildTransactionImportKey } from "@/lib/transaction-import-key";
 import { suggestDisplayId } from "@/lib/transaction-codes";
+import { toIsoDateString, parseApiDate } from "@/lib/date-format";
 
 type TransactionInput = z.infer<typeof transactionSchema>;
 
@@ -43,9 +45,14 @@ export async function createTransaction(
     suggestDisplayId(input.transactionType, firstLineType, existingIds) ||
     (await nextTransactionDisplayId(workspaceId));
 
+  const isoDate = toIsoDateString(input.date);
+  if (!isoDate) {
+    throw new Error("Invalid date — use DD/MM/YYYY");
+  }
+
   const importKey = buildTransactionImportKey(
     displayId,
-    input.date,
+    isoDate,
     input.transactionType
   );
 
@@ -57,7 +64,7 @@ export async function createTransaction(
         importKey,
         batchLabel: input.batchLabel ?? null,
         transactionType: input.transactionType,
-        date: new Date(input.date),
+        date: parseApiDate(isoDate),
         currency: "SGD",
         smartpacFee: input.smartpacFee ?? null,
         notes: input.notes ?? null,
@@ -108,6 +115,10 @@ export async function createTransaction(
       const delta = quantityDeltaForType(input.transactionType, Number(line.quantity));
       if (delta !== 0 && inventoryItemId) {
         await applyQuantityDelta(inventoryItemId, delta, tx);
+      }
+
+      if (input.transactionType === "buy" && inventoryItemId) {
+        await recalcInventoryPurchasePrice(inventoryItemId, tx);
       }
     }
 

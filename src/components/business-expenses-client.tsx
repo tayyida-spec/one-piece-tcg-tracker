@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { SectionHeading } from "@/components/page-heading";
 import { BUSINESS_EXPENSE_CATEGORIES } from "@/lib/validations";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
+import { isoToDisplayDate, todayDisplayDate } from "@/lib/date-format";
 import type { BusinessExpenseRow } from "@/lib/business-expense-data";
+import { DateInput } from "@/components/date-input";
 
 type FormState = {
   category: string;
@@ -32,7 +34,7 @@ function emptyForm(): FormState {
     category: BUSINESS_EXPENSE_CATEGORIES[0],
     itemName: "",
     vendor: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: todayDisplayDate(),
     amount: "",
     paymentMethod: "",
     owner: "",
@@ -49,7 +51,7 @@ function rowToForm(row: BusinessExpenseRow): FormState {
     category: row.category,
     itemName: row.itemName,
     vendor: row.vendor ?? "",
-    date: row.date.slice(0, 10),
+    date: isoToDisplayDate(row.date.slice(0, 10)),
     amount: String(row.amount),
     paymentMethod: row.paymentMethod ?? "",
     owner: row.owner ?? "",
@@ -216,7 +218,11 @@ export function BusinessExpensesClient({ rows }: { rows: BusinessExpenseRow[] })
               <Input type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
             </Field>
             <Field label="Date">
-              <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              <DateInput
+                id="exp-date"
+                value={form.date}
+                onChange={(date) => setForm({ ...form, date })}
+              />
             </Field>
             <Field label="Vendor / platform">
               <Input value={form.vendor} onChange={(e) => setForm({ ...form, vendor: e.target.value })} placeholder="e.g. Shopee" />

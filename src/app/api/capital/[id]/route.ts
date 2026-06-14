@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { capitalContributionSchema } from "@/lib/validations";
 
 import { isSchemaNotReadyError, SCHEMA_NOT_READY_MESSAGE } from "@/lib/safe-db";
+import { parseApiDate, toIsoDateString } from "@/lib/date-format";
 
 
 
@@ -54,13 +55,18 @@ export async function PATCH(
 
 
 
+    const isoDate = toIsoDateString(parsed.data.date);
+    if (!isoDate) {
+      return NextResponse.json({ error: "Invalid date — use DD/MM/YYYY" }, { status: 400 });
+    }
+
     const row = await prisma.capitalContribution.update({
 
       where: { id },
 
       data: {
 
-        date: new Date(parsed.data.date),
+        date: parseApiDate(isoDate),
 
         amount: parsed.data.amount,
 

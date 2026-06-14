@@ -5,7 +5,16 @@ import { prisma } from "@/lib/prisma";
 import { inventoryItemSchema } from "@/lib/validations";
 import { normalizeIdentity } from "@/lib/inventory-identity";
 import { marketPriceUpdateFields } from "@/lib/inventory-market-price";
+import { createTransaction } from "@/lib/transaction-service";
+import { toIsoDateString, todayDisplayDate } from "@/lib/date-format";
+import { z } from "zod";
 
+const inventoryCreateSchema = inventoryItemSchema.extend({
+  logTxnBuy: z.coerce.boolean().optional(),
+  purchaseDate: z.string().optional(),
+  txnUnitPrice: z.coerce.number().optional(),
+  displayId: z.string().optional(),
+});
 export async function GET(request: Request) {
   try {
     const { workspaceId } = await requireUser();
@@ -39,15 +48,50 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { workspaceId } = await requireUser();
+    const { workspaceId, user } = await requireUser();
     const body = await request.json();
-    const parsed = inventoryItemSchema.safeParse(body);
+    const parsed = inventoryCreateSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
     const data = parsed.data;
+
+    if (data.itemType === "sealed" && data.logTxnBuy && data.quantity > 0) {
+      const isoDate =
+        toIsoDateString(data.purchaseDate ?? todayDisplayDate()) ??
+        new Date().toISOString().slice(0, 10);
+
+      const txn = await createTransaction(workspaceId, user.id, {
+        transactionType: "buy",
+        date: isoDate,
+        displayId: data.displayId?.trim() || undefined,
+        batchLabel: null,
+        smartpacFee: null,
+        notes: data.notes ?? null,
+        lines: [
+          {
+            itemType: "sealed",
+            cardName: data.cardName,
+            cardId: data.cardId,
+            series: data.series ?? "",
+            rarity: data.rarity ?? "",
+            language: data.language ?? "JP",
+            variant: data.variant ?? "",
+            quantity: data.quantity,
+            unitPrice: data.txnUnitPrice ?? data.purchasePrice ?? 0,
+            owner: data.owner ?? null,
+            notes: data.notes ?? null,
+          },
+        ],
+      });
+
+      revalidateWorkspaceDashboard(workspaceId);
+      const item = txn.lines[0]?.inventoryItem;
+      return NextResponse.json(item ?? txn, { status: 201 });
+    }
+
     const identity = normalizeIdentity({
       itemType: data.itemType,
       cardId: data.cardId,
@@ -85,7 +129,12 @@ export async function POST(request: Request) {
         owner: data.owner ?? null,
         notes: data.notes ?? null,
         photoUrl: data.photoUrl || null,
-        status: data.quantity > 0 ? "in_stock" : (data.status ?? "sold_out"),
+        status:
+          data.quantity > 0
+            ? existing?.status === "cracked"
+              ? "cracked"
+              : "in_stock"
+            : (data.status ?? "sold_out"),
       },
       update: {
         cardName: data.cardName,
@@ -98,7 +147,12 @@ export async function POST(request: Request) {
         owner: data.owner ?? null,
         notes: data.notes ?? null,
         photoUrl: data.photoUrl || null,
-        status: data.quantity > 0 ? "in_stock" : (data.status ?? "sold_out"),
+        status:
+          data.quantity > 0
+            ? existing?.status === "cracked"
+              ? "cracked"
+              : "in_stock"
+            : (data.status ?? "sold_out"),
       },
     });
 
