@@ -11,6 +11,22 @@ export type { TransactionLogPage };
 
 export const TRANSACTION_LOG_PAGE_SIZE = 75;
 
+/** Types shown on the Transaction Log page (buys & sells only). */
+export const TRANSACTION_LOG_TYPES = ["buy", "sell"] as const;
+
+function transactionLogLineWhere(
+  workspaceId: string,
+  extra?: { date?: { gte: Date; lt: Date } }
+) {
+  return {
+    transaction: {
+      workspaceId,
+      transactionType: { in: [...TRANSACTION_LOG_TYPES] },
+      ...extra,
+    },
+  };
+}
+
 
 
 const lineSelect = {
@@ -191,17 +207,7 @@ export async function loadTransactionLogPage(
 
 
 
-  const where = {
-
-    transaction: {
-
-      workspaceId,
-
-      ...(range ? { date: range } : {}),
-
-    },
-
-  };
+  const where = transactionLogLineWhere(workspaceId, range ? { date: range } : undefined);
 
 
 
@@ -259,7 +265,7 @@ export async function loadTransactionLogMonths(workspaceId: string): Promise<str
 
   const rows = await prisma.transaction.findMany({
 
-    where: { workspaceId },
+    where: { workspaceId, transactionType: { in: [...TRANSACTION_LOG_TYPES] } },
 
     select: { date: true },
 
@@ -287,7 +293,7 @@ async function loadAllTransactionLogRows(workspaceId: string): Promise<Transacti
 
   const lines = await prisma.transactionLine.findMany({
 
-    where: { transaction: { workspaceId } },
+    where: transactionLogLineWhere(workspaceId),
 
     orderBy: [
 
