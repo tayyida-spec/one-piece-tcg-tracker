@@ -26,21 +26,21 @@ function identity(row) {
   };
 }
 
-/** OP16 case crack pulls — Mr.2 / Moby Dick / Ivankov SR* qty 2 for two sell blocks on 17 Jun */
+/** OP16 case crack pulls — Mr.3 qty 6 (block 4 sells 4, block 5 sells 2) */
 const CRACK_INVENTORY = [
   { cardName: "Portgas D. Ace", cardId: "OP16-118", series: "OP16", rarity: "SEC*", price: 47, qty: 2 },
-  { cardName: "Mr.2 Bon Kurei", cardId: "OP16-055", series: "OP16", rarity: "R*", price: 15, qty: 2 },
+  { cardName: "Mr.2 Bon Kurei", cardId: "OP16-055", series: "OP16", rarity: "R*", price: 15, qty: 1 },
   { cardName: "Kuma", cardId: "EB04-054", series: "OP16", rarity: "SP", price: 118, qty: 1 },
   { cardName: "Teach", cardId: "OP16-119", series: "OP16", rarity: "SEC*", price: 118, qty: 1 },
   { cardName: "Gold Don", cardId: "Gold Don", series: "OP16", rarity: "", price: 7.5, qty: 1 },
   { cardName: "Sakazuki", cardId: "OP16-065", series: "OP16", rarity: "SR*", price: 31.5, qty: 1 },
-  { cardName: "Ivankov", cardId: "OP16-026", series: "OP16", rarity: "SR*", price: 11.5, qty: 2 },
-  { cardName: "Moby Dick", cardId: "OP16-021", series: "OP16", rarity: "R*", price: 15.5, qty: 2 },
+  { cardName: "Ivankov", cardId: "OP16-026", series: "OP16", rarity: "SR*", price: 11.5, qty: 1 },
+  { cardName: "Moby Dick", cardId: "OP16-021", series: "OP16", rarity: "R*", price: 15.5, qty: 1 },
   { cardName: "Buggy", cardId: "OP16-041", series: "OP16", rarity: "L*", price: 23.5, qty: 1 },
   { cardName: "Yamato", cardId: "OP16-098", series: "OP16", rarity: "SR*", price: 79.5, qty: 1 },
   { cardName: "Yamato", cardId: "OP16-079", series: "OP16", rarity: "L*", price: 158, qty: 1 },
   { cardName: "Teach", cardId: "OP16-119", series: "OP16", rarity: "SEC", price: 55.5, qty: 2 },
-  { cardName: "Mr.3", cardId: "OP16-056", series: "OP16", rarity: "SR", price: 19.5, qty: 4 },
+  { cardName: "Mr.3", cardId: "OP16-056", series: "OP16", rarity: "SR", price: 19.5, qty: 6 },
   { cardName: "Sakazuki", cardId: "OP16-065", series: "OP16", rarity: "SR", price: 31.5, qty: 3 },
   { cardName: "Kinemon", cardId: "OP16-082", series: "OP17", rarity: "SR", price: 6, qty: 5 },
   { cardName: "Yamato", cardId: "OP16-098", series: "OP18", rarity: "SR", price: 7.5, qty: 7 },
@@ -54,15 +54,17 @@ const CRACK_INVENTORY = [
   { cardName: "Sakazuki", cardId: "OP16-065", series: "OP26", rarity: "SR", price: 3, qty: 4 },
 ];
 
-const SELL_BLOCK_A = [
-  { cardName: "Mr.2 Bon Kurei", cardId: "OP16-055", series: "OP16", rarity: "R*", unitPrice: 15, qty: 1 },
-  { cardName: "Moby Dick", cardId: "OP16-021", series: "OP16", rarity: "R*", unitPrice: 15, qty: 1 },
-  { cardName: "Ivankov", cardId: "OP16-026", series: "OP16", rarity: "SR*", unitPrice: 12, qty: 1 },
-];
-
-/** Five separate TXN002 sell transactions on 17 June */
+/** Five TXN002 sell transactions on 17 June — block 5 line totals sum to $40 + $3 smartpac = $43 */
 const SELL_GROUPS = [
-  { suffix: 1, smartpacFee: null, lines: SELL_BLOCK_A },
+  {
+    suffix: 1,
+    smartpacFee: null,
+    lines: [
+      { cardName: "Mr.2 Bon Kurei", cardId: "OP16-055", series: "OP16", rarity: "R*", unitPrice: 15, qty: 1 },
+      { cardName: "Moby Dick", cardId: "OP16-021", series: "OP16", rarity: "R*", unitPrice: 15, qty: 1 },
+      { cardName: "Ivankov", cardId: "OP16-026", series: "OP16", rarity: "SR*", unitPrice: 12, qty: 1 },
+    ],
+  },
   {
     suffix: 2,
     smartpacFee: null,
@@ -93,7 +95,15 @@ const SELL_GROUPS = [
       { cardName: "Mr.3", cardId: "OP16-056", series: "OP16", rarity: "SR", unitPrice: 15, qty: 4 },
     ],
   },
-  { suffix: 5, smartpacFee: null, lines: SELL_BLOCK_A },
+  {
+    suffix: 5,
+    smartpacFee: 3,
+    lines: [
+      { cardName: "Mr.3", cardId: "OP16-056", series: "OP16", rarity: "SR", unitPrice: 14.5, qty: 2 },
+      { cardName: "Ivankov", cardId: "OP16-026", series: "OP24", rarity: "SR", unitPrice: 4 / 3, qty: 3 },
+      { cardName: "Buggy", cardId: "OP16-048", series: "OP19", rarity: "SR", unitPrice: 1.75, qty: 4 },
+    ],
+  },
 ];
 
 async function findItem(tx, workspaceId, row) {
@@ -138,7 +148,6 @@ async function reversePriorSeed(workspaceId) {
     await prisma.transaction.deleteMany({ where: { id: { in: seeded.map((t) => t.id) } } });
   }
 
-  // Reset crack inventory rows from prior seed back to 0 before re-adding
   for (const row of CRACK_INVENTORY) {
     const item = await findItem(prisma, workspaceId, row);
     if (item?.notes?.includes("Case crack (TXN002)")) {
@@ -151,8 +160,8 @@ async function reversePriorSeed(workspaceId) {
 }
 
 async function upsertCrackItem(tx, workspaceId, row) {
-  const id = identity(row);
   const existing = await findItem(tx, workspaceId, row);
+  const id = identity(row);
   if (existing) {
     return tx.inventoryItem.update({
       where: { id: existing.id },
@@ -186,7 +195,6 @@ async function main() {
 
   await prisma.$transaction(
     async (tx) => {
-      // Inventory-only case crack (no transaction log row)
       for (const row of CRACK_INVENTORY) {
         const item = await upsertCrackItem(tx, workspace.id, row);
         await applyDelta(tx, item.id, row.qty);
@@ -210,10 +218,10 @@ async function main() {
 
         for (const line of group.lines) {
           const item = await findItem(tx, workspace.id, line);
-          if (!item) throw new Error(`Missing inventory: ${line.cardName} ${line.cardId}`);
+          if (!item) throw new Error(`Missing inventory: ${line.cardName} ${line.cardId} ${line.series} ${line.rarity}`);
           if (Number(item.quantity) < line.qty) {
             throw new Error(
-              `Insufficient ${line.cardName} (${line.rarity}): have ${item.quantity}, need ${line.qty}`
+              `Insufficient ${line.cardName} (${line.series} ${line.rarity}): have ${item.quantity}, need ${line.qty}`
             );
           }
           await applyDelta(tx, item.id, -line.qty);
@@ -242,10 +250,24 @@ async function main() {
     { maxWait: 30000, timeout: 120000 }
   );
 
-  const sellCount = await prisma.transaction.count({
-    where: { workspaceId: workspace.id, displayId: "TXN002", transactionType: "sell", notes: { contains: SEED_TAG } },
-  });
-  console.log("\nDone:", sellCount, "sell transactions under TXN002 on 17 Jun 2026");
+  console.log("\nRemaining inventory after sells:");
+  const check = [
+    ["OP16-055", "OP16", "R*", "Mr.2"],
+    ["OP16-021", "OP16", "R*", "Moby Dick"],
+    ["OP16-026", "OP16", "SR*", "Ivankov SR*"],
+    ["EB04-054", "OP16", "SP", "Kuma"],
+    ["OP16-079", "OP16", "L*", "Yamato L*"],
+    ["OP16-065", "OP16", "SR*", "Sakazuki SR*"],
+    ["OP16-056", "OP16", "SR", "Mr.3 OP16"],
+    ["OP16-026", "OP24", "SR", "Ivankov OP24"],
+    ["OP16-048", "OP19", "SR", "Buggy OP19"],
+  ];
+  for (const [cardId, series, rarity, label] of check) {
+    const item = await prisma.inventoryItem.findFirst({
+      where: { workspaceId: workspace.id, cardId, series, rarity },
+    });
+    console.log(`  ${label}: qty=${item?.quantity ?? 0} (${item?.status ?? "n/a"})`);
+  }
 }
 
 main()
