@@ -44,6 +44,23 @@ export function suggestDisplayId(
   return null;
 }
 
+/** Resolve user input: blank → suggest, "TXN"/"BC" alone → next code, else use as typed. */
+export function resolveDisplayId(
+  raw: string | undefined | null,
+  existingDisplayIds: string[],
+  transactionType: string,
+  itemType: string | undefined
+): string {
+  const trimmed = raw?.trim() ?? "";
+  if (!trimmed) {
+    return suggestDisplayId(transactionType, itemType, existingDisplayIds) ?? "";
+  }
+  const upper = trimmed.toUpperCase();
+  if (upper === "TXN") return nextCodeForPrefix("txn", existingDisplayIds);
+  if (upper === "BC") return nextCodeForPrefix("bc", existingDisplayIds);
+  return trimmed;
+}
+
 export const BATCH_LABELS: Record<
   TransactionBatchCategory,
   { label: string; description: string }
@@ -63,4 +80,4 @@ export const BATCH_LABELS: Record<
 };
 
 export const TRANSACTION_ID_HINT =
-  "TXN### = case break · BC### = buy or sell card (reuse same number for a pair). Editable in Transaction Log.";
+  "Type TXN or BC alone for the next number (e.g. BC009). Reuse the same TXN/BC### for related buys and sells.";

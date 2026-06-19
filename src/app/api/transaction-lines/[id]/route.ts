@@ -3,7 +3,8 @@ import { revalidateWorkspaceDashboard } from "@/lib/cache-revalidate";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { transactionLineEditSchema } from "@/lib/validations";
-import { buildTransactionImportKey } from "@/lib/transaction-import-key";
+import { ensureUniqueImportKey } from "@/lib/transaction-import-key";
+import { resolveDisplayId } from "@/lib/transaction-codes";
 import { recalcInventoryPurchasePrice } from "@/lib/inventory-cost-sync";
 import { parseApiDate, toIsoDateString } from "@/lib/date-format";
 
@@ -38,26 +39,29 @@ export async function PATCH(
 
     const itemType =
       data.itemType === "case" ? "sealed" : data.itemType === "card" ? "card" : data.itemType;
-    const importKey = buildTransactionImportKey(
+
+    const existingIds = (
+      await prisma.transaction.findMany({
+        where: { workspaceId },
+        select: { displayId: true },
+      })
+    ).map((t) => t.displayId);
+
+    const displayId = resolveDisplayId(
       data.displayId,
-      isoDate,
-      data.transactionType
+      existingIds,
+      data.transactionType,
+      itemType
     );
 
-    const importKeyConflict = await prisma.transaction.findFirst({
-      where: {
-        workspaceId,
-        importKey,
-        id: { not: existing.transactionId },
-      },
-    });
-
-    if (importKeyConflict) {
-      return NextResponse.json(
-        { error: "Another transaction already uses this ID + date + type combination" },
-        { status: 400 }
-      );
-    }
+    const importKey = await ensureUniqueImportKey(
+      workspaceId,
+      displayId,
+      isoDate,
+      data.transactionType,
+      prisma,
+      existing.transactionId
+    );
 
     const line = await prisma.transactionLine.update({
       where: { id },
@@ -76,7 +80,7 @@ export async function PATCH(
         notes: data.notes ?? null,
         transaction: {
           update: {
-            displayId: data.displayId,
+            displayId,
             importKey,
             transactionType: data.transactionType,
             date: parseApiDate(isoDate),

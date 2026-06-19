@@ -4,23 +4,55 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Menu, User, X } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { ChevronDown, Menu, User, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-const links = [
+type NavLink = { href: string; label: string };
+
+type NavGroup = {
+  label: string;
+  items: NavLink[];
+};
+
+type NavEntry = NavLink | NavGroup;
+
+function isNavGroup(entry: NavEntry): entry is NavGroup {
+  return "items" in entry;
+}
+
+const navEntries: NavEntry[] = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/inventory", label: "Inventory" },
-  { href: "/card-prices", label: "Price list" },
-  { href: "/transactions", label: "Transactions" },
+  {
+    label: "Inventory",
+    items: [
+      { href: "/inventory", label: "Inventory" },
+      { href: "/card-prices", label: "Price list" },
+    ],
+  },
+  {
+    label: "Finance",
+    items: [
+      { href: "/transactions", label: "Transactions" },
+      { href: "/business-expenses", label: "Expenses" },
+      { href: "/capital", label: "Capital" },
+    ],
+  },
   { href: "/quick-add", label: "Quick add" },
   { href: "/case-crack", label: "Case crack" },
-  { href: "/business-expenses", label: "Expenses" },
-  { href: "/capital", label: "Capital" },
   { href: "/members", label: "Members" },
   { href: "/profile", label: "Profile" },
 ];
+
+function isPathActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function groupIsActive(pathname: string, group: NavGroup) {
+  return group.items.some((item) => isPathActive(pathname, item.href));
+}
 
 export function AppNav({
   workspaceName,
@@ -45,17 +77,27 @@ export function AppNav({
     router.refresh();
   }
 
-  function linkClass(href: string) {
-    const active = pathname === href || pathname.startsWith(`${href}/`);
+  function linkClass(href: string, compact = false) {
+    const active = isPathActive(pathname, href);
     return cn(
-      "block rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+      "block rounded-md font-medium transition-colors",
+      compact ? "px-3 py-2 text-sm" : "px-3 py-2.5 text-sm",
       active
         ? "bg-brand text-white shadow-sm shadow-brand/20"
         : "text-muted hover:bg-surface-elevated hover:text-foreground"
     );
   }
 
-  const profileActive = pathname === "/profile" || pathname.startsWith("/profile/");
+  function triggerClass(active: boolean) {
+    return cn(
+      "inline-flex items-center gap-1 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+      active
+        ? "bg-brand text-white shadow-sm shadow-brand/20"
+        : "text-muted hover:bg-surface-elevated hover:text-foreground"
+    );
+  }
+
+  const profileActive = isPathActive(pathname, "/profile");
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -80,16 +122,25 @@ export function AppNav({
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                prefetch={true}
-                className={linkClass(link.href)}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navEntries.map((entry) =>
+              isNavGroup(entry) ? (
+                <NavDropdown
+                  key={entry.label}
+                  group={entry}
+                  pathname={pathname}
+                  triggerClass={triggerClass(groupIsActive(pathname, entry))}
+                />
+              ) : (
+                <Link
+                  key={entry.href}
+                  href={entry.href}
+                  prefetch={true}
+                  className={linkClass(entry.href)}
+                >
+                  {entry.label}
+                </Link>
+              )
+            )}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -138,13 +189,30 @@ export function AppNav({
               <span className="truncate text-sm font-medium text-foreground">{userName}</span>
             </div>
             <ul className="space-y-1">
-              {links.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} prefetch={true} className={linkClass(link.href)}>
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
+              {navEntries.map((entry) =>
+                isNavGroup(entry) ? (
+                  <li key={entry.label}>
+                    <p className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                      {entry.label}
+                    </p>
+                    <ul className="space-y-1">
+                      {entry.items.map((item) => (
+                        <li key={item.href}>
+                          <Link href={item.href} prefetch={true} className={linkClass(item.href, true)}>
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ) : (
+                  <li key={entry.href}>
+                    <Link href={entry.href} prefetch={true} className={linkClass(entry.href)}>
+                      {entry.label}
+                    </Link>
+                  </li>
+                )
+              )}
               <li className="pt-2 md:hidden">
                 <Button variant="outline" size="sm" className="w-full" onClick={signOut}>
                   Sign out
@@ -155,5 +223,51 @@ export function AppNav({
         ) : null}
       </div>
     </header>
+  );
+}
+
+function NavDropdown({
+  group,
+  pathname,
+  triggerClass,
+}: {
+  group: NavGroup;
+  pathname: string;
+  triggerClass: string;
+}) {
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger className={triggerClass} aria-label={`${group.label} menu`}>
+        {group.label}
+        <ChevronDown className="h-4 w-4 opacity-80" aria-hidden />
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          className="z-50 min-w-[11rem] rounded-lg border border-border bg-surface p-1 shadow-lg"
+          sideOffset={6}
+          align="start"
+        >
+          {group.items.map((item) => {
+            const active = isPathActive(pathname, item.href);
+            return (
+              <DropdownMenu.Item key={item.href} asChild>
+                <Link
+                  href={item.href}
+                  prefetch={true}
+                  className={cn(
+                    "block cursor-pointer select-none rounded-md px-3 py-2 text-sm outline-none",
+                    active
+                      ? "bg-brand text-white"
+                      : "text-foreground hover:bg-surface-elevated focus:bg-surface-elevated"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              </DropdownMenu.Item>
+            );
+          })}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
   );
 }

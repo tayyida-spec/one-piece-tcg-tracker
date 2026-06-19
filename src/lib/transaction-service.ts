@@ -7,8 +7,8 @@ import {
   nextTransactionDisplayId,
 } from "@/lib/inventory-service";
 import { recalcInventoryPurchasePrice } from "@/lib/inventory-cost-sync";
-import { buildTransactionImportKey } from "@/lib/transaction-import-key";
-import { suggestDisplayId } from "@/lib/transaction-codes";
+import { ensureUniqueImportKey } from "@/lib/transaction-import-key";
+import { resolveDisplayId } from "@/lib/transaction-codes";
 import { toIsoDateString, parseApiDate } from "@/lib/date-format";
 
 type TransactionInput = z.infer<typeof transactionSchema>;
@@ -41,8 +41,7 @@ export async function createTransaction(
 
   const firstLineType = input.lines[0]?.itemType;
   const displayId =
-    input.displayId?.trim() ||
-    suggestDisplayId(input.transactionType, firstLineType, existingIds) ||
+    resolveDisplayId(input.displayId, existingIds, input.transactionType, firstLineType) ||
     (await nextTransactionDisplayId(workspaceId));
 
   const isoDate = toIsoDateString(input.date);
@@ -50,13 +49,15 @@ export async function createTransaction(
     throw new Error("Invalid date — use DD/MM/YYYY");
   }
 
-  const importKey = buildTransactionImportKey(
-    displayId,
-    isoDate,
-    input.transactionType
-  );
-
   return prisma.$transaction(async (tx) => {
+    const importKey = await ensureUniqueImportKey(
+      workspaceId,
+      displayId,
+      isoDate,
+      input.transactionType,
+      tx
+    );
+
     const transaction = await tx.transaction.create({
       data: {
         workspaceId,

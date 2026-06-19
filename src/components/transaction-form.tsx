@@ -11,12 +11,28 @@ import { DateInput } from "@/components/date-input";
 import { todayDisplayDate } from "@/lib/date-format";
 import { TRANSACTION_ID_HINT } from "@/lib/transaction-codes";
 
+async function autofillDisplayIdPrefix(value: string): Promise<string | null> {
+  const upper = value.trim().toUpperCase();
+  if (upper !== "TXN" && upper !== "BC") return null;
+  const prefix = upper === "TXN" ? "txn" : "bc";
+  const res = await fetch(`/api/transactions/next-code?prefix=${prefix}`);
+  if (!res.ok) return null;
+  const data = (await res.json()) as { code?: string };
+  return data.code ?? null;
+}
+
 export function TransactionForm({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [displayId, setDisplayId] = useState("");
 
   const today = todayDisplayDate();
+
+  async function onDisplayIdBlur() {
+    const next = await autofillDisplayIdPrefix(displayId);
+    if (next) setDisplayId(next);
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,14 +40,14 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
     setError(null);
 
     const fd = new FormData(e.currentTarget);
-    const displayId = (fd.get("displayId") as string)?.trim();
+    const displayIdValue = (fd.get("displayId") as string)?.trim();
     const str = (name: string) => (fd.get(name) as string | null)?.trim() ?? "";
 
     const body = {
       ...(compact ? { quickAdd: true } : {}),
       transactionType: fd.get("transactionType"),
       date: fd.get("date"),
-      ...(displayId ? { displayId } : {}),
+      ...(displayIdValue ? { displayId: displayIdValue } : {}),
       batchLabel: fd.get("batchLabel") || null,
       smartpacFee: fd.get("smartpacFee") || null,
       notes: fd.get("notes") || null,
@@ -70,6 +86,25 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
     router.refresh();
   }
 
+  const displayIdField = (
+    <div className="space-y-2">
+      <Label htmlFor="displayId">Transaction ID (optional)</Label>
+      <Input
+        id="displayId"
+        name="displayId"
+        value={displayId}
+        onChange={(e) => setDisplayId(e.target.value)}
+        onBlur={onDisplayIdBlur}
+        placeholder={
+          compact
+            ? "TXN or BC for next · reuse BC008 for sells"
+            : "Type TXN or BC for next code, or BC008 to reuse"
+        }
+      />
+      {!compact ? <p className="text-xs text-muted">{TRANSACTION_ID_HINT}</p> : null}
+    </div>
+  );
+
   return (
     <form
       onSubmit={onSubmit}
@@ -94,15 +129,7 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
 
       {!compact ? (
         <>
-          <div className="space-y-2">
-            <Label htmlFor="displayId">Transaction ID (optional)</Label>
-            <Input
-              id="displayId"
-              name="displayId"
-              placeholder="TXN002, BC008 — auto-suggested for buys if blank"
-            />
-            <p className="text-xs text-muted">{TRANSACTION_ID_HINT}</p>
-          </div>
+          {displayIdField}
           <div className="space-y-2">
             <Label htmlFor="batchLabel">Batch label (optional)</Label>
             <Input id="batchLabel" name="batchLabel" placeholder="Trade night, OP15 case…" />
@@ -112,7 +139,9 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
             <Input id="smartpacFee" name="smartpacFee" type="number" step="0.01" min="0" />
           </div>
         </>
-      ) : null}
+      ) : (
+        displayIdField
+      )}
 
       <hr className="border-border" />
       <p className="text-sm font-medium text-foreground">Line item</p>
@@ -142,12 +171,7 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="cardId">Card ID</Label>
-        <Input
-          id="cardId"
-          name="cardId"
-          required={!compact}
-          placeholder="OP11-118"
-        />
+        <Input id="cardId" name="cardId" required={!compact} placeholder="OP11-118" />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -169,7 +193,15 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="space-y-2">
           <Label htmlFor="quantity">Qty</Label>
-          <Input id="quantity" name="quantity" type="number" step="0.01" min="0.01" required defaultValue={1} />
+          <Input
+            id="quantity"
+            name="quantity"
+            type="number"
+            step="0.01"
+            min="0.01"
+            required
+            defaultValue={1}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="unitPrice">Unit price (SGD)</Label>
