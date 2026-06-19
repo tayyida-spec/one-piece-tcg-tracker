@@ -10,11 +10,16 @@ import {
   transactionsCacheTag,
 } from "@/lib/cache-tags";
 
-/** Call after any change that affects dashboard, inventory, or transaction lists. */
-export function revalidateWorkspaceDashboard(workspaceId: string) {
+/** Fast invalidation after writes — tags only, no path revalidation. */
+export function revalidateWorkspaceDataTags(workspaceId: string) {
   revalidateTag(dashboardCacheTag(workspaceId));
   revalidateTag(inventoryCacheTag(workspaceId));
   revalidateTag(transactionsCacheTag(workspaceId));
+}
+
+/** Full invalidation including page paths — use when UI must refresh immediately. */
+export function revalidateWorkspaceDashboard(workspaceId: string) {
+  revalidateWorkspaceDataTags(workspaceId);
   revalidatePath("/inventory");
   revalidatePath("/case-crack");
   revalidatePath("/transactions");

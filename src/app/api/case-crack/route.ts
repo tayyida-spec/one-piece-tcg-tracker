@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { loadCrackableCases, crackCase } from "@/lib/case-crack-service";
 import { caseCrackSchema } from "@/lib/validations";
-import { revalidateWorkspaceDashboard } from "@/lib/cache-revalidate";
+import { revalidateWorkspaceDataTags, revalidateWorkspaceCardPrices } from "@/lib/cache-revalidate";
 
 export async function GET() {
   try {
@@ -25,7 +25,10 @@ export async function POST(request: Request) {
     }
 
     const result = await crackCase(workspaceId, parsed.data);
-    revalidateWorkspaceDashboard(workspaceId);
+    revalidateWorkspaceDataTags(workspaceId);
+    if (result.pricesUpdated > 0) {
+      revalidateWorkspaceCardPrices(workspaceId);
+    }
 
     return NextResponse.json(result, { status: 201 });
   } catch (e) {

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { revalidateWorkspaceDashboard } from "@/lib/cache-revalidate";
+import { revalidateWorkspaceDataTags } from "@/lib/cache-revalidate";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { transactionLineEditSchema } from "@/lib/validations";
 import { ensureUniqueImportKey } from "@/lib/transaction-import-key";
-import { resolveDisplayId } from "@/lib/transaction-codes";
+import { resolveDisplayIdAsync } from "@/lib/transaction-code-data";
 import { recalcInventoryPurchasePrice } from "@/lib/inventory-cost-sync";
 import { parseApiDate, toIsoDateString } from "@/lib/date-format";
 
@@ -40,16 +40,9 @@ export async function PATCH(
     const itemType =
       data.itemType === "case" ? "sealed" : data.itemType === "card" ? "card" : data.itemType;
 
-    const existingIds = (
-      await prisma.transaction.findMany({
-        where: { workspaceId },
-        select: { displayId: true },
-      })
-    ).map((t) => t.displayId);
-
-    const displayId = resolveDisplayId(
+    const displayId = await resolveDisplayIdAsync(
+      workspaceId,
       data.displayId,
-      existingIds,
       data.transactionType,
       itemType
     );
@@ -94,7 +87,7 @@ export async function PATCH(
       await recalcInventoryPurchasePrice(existing.inventoryItemId);
     }
 
-    revalidateWorkspaceDashboard(workspaceId);
+    revalidateWorkspaceDataTags(workspaceId);
     return NextResponse.json(line);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Update failed";
@@ -131,7 +124,7 @@ export async function DELETE(
       await recalcInventoryPurchasePrice(inventoryItemId);
     }
 
-    revalidateWorkspaceDashboard(workspaceId);
+    revalidateWorkspaceDataTags(workspaceId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Delete failed";

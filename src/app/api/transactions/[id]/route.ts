@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidateWorkspaceDashboard } from "@/lib/cache-revalidate";
+import { revalidateWorkspaceDataTags } from "@/lib/cache-revalidate";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recalcInventoryPurchasePrice } from "@/lib/inventory-cost-sync";
@@ -77,7 +77,7 @@ export async function DELETE(
       await recalcInventoryPurchasePrice(inventoryItemId);
     }
 
-    revalidateWorkspaceDashboard(workspaceId);
+    revalidateWorkspaceDataTags(workspaceId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error";

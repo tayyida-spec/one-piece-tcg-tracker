@@ -18,46 +18,49 @@ const CODE_PREFIX: Record<"txn" | "bc", string> = {
   bc: "BC",
 };
 
-export function nextCodeForPrefix(prefix: "txn" | "bc", existingDisplayIds: string[]): string {
+export function nextCodeFromMax(prefix: "txn" | "bc", maxSuffix: number): string {
   const head = CODE_PREFIX[prefix];
-  let max = 0;
-  const re = new RegExp(`^${head}(\\d+)$`, "i");
-
-  for (const raw of existingDisplayIds) {
-    const m = raw.trim().match(re);
-    if (m) max = Math.max(max, parseInt(m[1], 10));
-  }
-
-  return `${head}${String(max + 1).padStart(3, "0")}`;
+  return `${head}${String(maxSuffix + 1).padStart(3, "0")}`;
 }
 
-export function suggestDisplayId(
+/** Which prefix max values are needed to resolve this input (skip DB when user typed a full code). */
+export function neededCodePrefixes(
+  raw: string | undefined | null,
   transactionType: string,
-  itemType: string | undefined,
-  existingDisplayIds: string[]
-): string | null {
+  itemType: string | undefined
+): { txn?: boolean; bc?: boolean } {
+  const trimmed = raw?.trim() ?? "";
+  const upper = trimmed.toUpperCase();
+  if (upper === "TXN") return { txn: true };
+  if (upper === "BC") return { bc: true };
+  if (trimmed) return {};
+
   const type = transactionType.toLowerCase();
   if (type === "buy" && (itemType === "sealed" || itemType === "case")) {
-    return nextCodeForPrefix("txn", existingDisplayIds);
+    return { txn: true };
   }
-  if (type === "buy") return nextCodeForPrefix("bc", existingDisplayIds);
-  return null;
+  if (type === "buy") return { bc: true };
+  return {};
 }
 
-/** Resolve user input: blank → suggest, "TXN"/"BC" alone → next code, else use as typed. */
-export function resolveDisplayId(
+export function resolveDisplayIdWithMax(
   raw: string | undefined | null,
-  existingDisplayIds: string[],
+  maxSuffixes: { txn: number; bc: number },
   transactionType: string,
   itemType: string | undefined
 ): string {
   const trimmed = raw?.trim() ?? "";
   if (!trimmed) {
-    return suggestDisplayId(transactionType, itemType, existingDisplayIds) ?? "";
+    const type = transactionType.toLowerCase();
+    if (type === "buy" && (itemType === "sealed" || itemType === "case")) {
+      return nextCodeFromMax("txn", maxSuffixes.txn);
+    }
+    if (type === "buy") return nextCodeFromMax("bc", maxSuffixes.bc);
+    return "";
   }
   const upper = trimmed.toUpperCase();
-  if (upper === "TXN") return nextCodeForPrefix("txn", existingDisplayIds);
-  if (upper === "BC") return nextCodeForPrefix("bc", existingDisplayIds);
+  if (upper === "TXN") return nextCodeFromMax("txn", maxSuffixes.txn);
+  if (upper === "BC") return nextCodeFromMax("bc", maxSuffixes.bc);
   return trimmed;
 }
 

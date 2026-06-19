@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
+import { revalidateWorkspaceDataTags } from "@/lib/cache-revalidate";
 import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { nextCodeForPrefix } from "@/lib/transaction-codes";
+import { nextCodeForPrefixAsync } from "@/lib/transaction-code-data";
 
 export async function GET(request: Request) {
   try {
@@ -13,14 +13,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "prefix must be txn or bc" }, { status: 400 });
     }
 
-    const existingIds = (
-      await prisma.transaction.findMany({
-        where: { workspaceId },
-        select: { displayId: true },
-      })
-    ).map((t) => t.displayId);
-
-    return NextResponse.json({ code: nextCodeForPrefix(prefix, existingIds) });
+    const code = await nextCodeForPrefixAsync(workspaceId, prefix);
+    return NextResponse.json({ code });
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

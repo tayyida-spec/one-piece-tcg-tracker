@@ -148,7 +148,7 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
   };
 }
 
-/** Cached dashboard queries — invalidated on writes via revalidateWorkspaceDashboard. */
+/** Cached dashboard queries — invalidated on writes via revalidateWorkspaceDataTags. */
 export function getCachedDashboardPayload(workspaceId: string) {
   return unstable_cache(
     () => loadDashboardPayload(workspaceId),

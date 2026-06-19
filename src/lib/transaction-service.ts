@@ -6,12 +6,17 @@ import {
   findOrCreateInventoryItem,
   nextTransactionDisplayId,
 } from "@/lib/inventory-service";
-import { recalcInventoryPurchasePrice } from "@/lib/inventory-cost-sync";
+import { incrementPurchasePriceOnBuy } from "@/lib/inventory-cost-sync";
 import { ensureUniqueImportKey } from "@/lib/transaction-import-key";
-import { resolveDisplayId } from "@/lib/transaction-codes";
+import { resolveDisplayIdAsync } from "@/lib/transaction-code-data";
 import { toIsoDateString, parseApiDate } from "@/lib/date-format";
 
 type TransactionInput = z.infer<typeof transactionSchema>;
+
+export type CreatedTransaction = {
+  id: string;
+  displayId: string;
+};
 
 function quantityDeltaForType(type: string, qty: number) {
   switch (type) {
@@ -31,25 +36,23 @@ export async function createTransaction(
   workspaceId: string,
   userId: string,
   input: TransactionInput
-) {
-  const existingIds = (
-    await prisma.transaction.findMany({
-      where: { workspaceId },
-      select: { displayId: true },
-    })
-  ).map((t) => t.displayId);
-
+): Promise<CreatedTransaction> {
   const firstLineType = input.lines[0]?.itemType;
-  const displayId =
-    resolveDisplayId(input.displayId, existingIds, input.transactionType, firstLineType) ||
-    (await nextTransactionDisplayId(workspaceId));
-
   const isoDate = toIsoDateString(input.date);
   if (!isoDate) {
     throw new Error("Invalid date — use DD/MM/YYYY");
   }
 
   return prisma.$transaction(async (tx) => {
+    const displayId =
+      (await resolveDisplayIdAsync(
+        workspaceId,
+        input.displayId,
+        input.transactionType,
+        firstLineType,
+        tx
+      )) || (await nextTransactionDisplayId(workspaceId));
+
     const importKey = await ensureUniqueImportKey(
       workspaceId,
       displayId,
@@ -80,17 +83,21 @@ export async function createTransaction(
       let inventoryItemId = line.inventoryItemId ?? null;
 
       if (!inventoryItemId) {
-        const item = await findOrCreateInventoryItem(workspaceId, {
-          itemType,
-          cardName: line.cardName,
-          cardId: line.cardId,
-          series: line.series,
-          rarity: line.rarity,
-          language: line.language,
-          variant: line.variant,
-          owner: line.owner,
-          notes: line.notes,
-        });
+        const item = await findOrCreateInventoryItem(
+          workspaceId,
+          {
+            itemType,
+            cardName: line.cardName,
+            cardId: line.cardId,
+            series: line.series,
+            rarity: line.rarity,
+            language: line.language,
+            variant: line.variant,
+            owner: line.owner,
+            notes: line.notes,
+          },
+          tx
+        );
         inventoryItemId = item.id;
       }
 
@@ -119,13 +126,15 @@ export async function createTransaction(
       }
 
       if (input.transactionType === "buy" && inventoryItemId) {
-        await recalcInventoryPurchasePrice(inventoryItemId, tx);
+        await incrementPurchasePriceOnBuy(
+          inventoryItemId,
+          Number(line.quantity),
+          Number(line.unitPrice),
+          tx
+        );
       }
     }
 
-    return tx.transaction.findUniqueOrThrow({
-      where: { id: transaction.id },
-      include: { lines: { include: { inventoryItem: true } } },
-    });
+    return { id: transaction.id, displayId: transaction.displayId };
   });
 }

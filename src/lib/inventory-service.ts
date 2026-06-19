@@ -2,24 +2,28 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { normalizeIdentity } from "@/lib/inventory-identity";
 
+type InventoryItemInput = {
+  itemType?: string;
+  cardName: string;
+  cardId: string;
+  series?: string;
+  rarity?: string;
+  language?: string;
+  variant?: string;
+  condition?: string | null;
+  location?: string | null;
+  owner?: string | null;
+  notes?: string | null;
+  purchasePrice?: number | null;
+  currentMarketPrice?: number | null;
+};
+
 export async function findOrCreateInventoryItem(
   workspaceId: string,
-  data: {
-    itemType?: string;
-    cardName: string;
-    cardId: string;
-    series?: string;
-    rarity?: string;
-    language?: string;
-    variant?: string;
-    condition?: string | null;
-    location?: string | null;
-    owner?: string | null;
-    notes?: string | null;
-    purchasePrice?: number | null;
-    currentMarketPrice?: number | null;
-  }
+  data: InventoryItemInput,
+  tx?: Prisma.TransactionClient
 ) {
+  const db = tx ?? prisma;
   const identity = normalizeIdentity({
     itemType: data.itemType,
     cardId: data.cardId,
@@ -29,18 +33,17 @@ export async function findOrCreateInventoryItem(
     variant: data.variant,
   });
 
-  const existing = await prisma.inventoryItem.findUnique({
-    where: {
-      workspaceId_itemType_cardId_series_rarity_variant_language: {
-        workspaceId,
-        ...identity,
-      },
+  const whereUnique = {
+    workspaceId_itemType_cardId_series_rarity_variant_language: {
+      workspaceId,
+      ...identity,
     },
-  });
+  };
 
+  const existing = await db.inventoryItem.findUnique({ where: whereUnique });
   if (existing) return existing;
 
-  return prisma.inventoryItem.create({
+  return db.inventoryItem.create({
     data: {
       workspaceId,
       ...identity,
@@ -65,17 +68,20 @@ export async function applyQuantityDelta(
   const db = tx ?? prisma;
   const item = await db.inventoryItem.findUniqueOrThrow({
     where: { id: inventoryItemId },
+    select: { quantity: true, status: true },
   });
 
   const nextQty = Number(item.quantity) + delta;
-  const status = nextQty <= 0 ? "sold_out" : "in_stock";
+  let status = item.status;
+  if (nextQty <= 0) {
+    status = "sold_out";
+  } else if (status !== "cracked") {
+    status = "in_stock";
+  }
 
   return db.inventoryItem.update({
     where: { id: inventoryItemId },
-    data: {
-      quantity: nextQty,
-      status,
-    },
+    data: { quantity: nextQty, status },
   });
 }
 

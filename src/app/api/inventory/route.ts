@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidateWorkspaceDashboard } from "@/lib/cache-revalidate";
+import { revalidateWorkspaceDataTags } from "@/lib/cache-revalidate";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { inventoryItemSchema } from "@/lib/validations";
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
         toIsoDateString(data.purchaseDate ?? todayDisplayDate()) ??
         new Date().toISOString().slice(0, 10);
 
-      const txn = await createTransaction(workspaceId, user.id, {
+      await createTransaction(workspaceId, user.id, {
         transactionType: "buy",
         date: isoDate,
         displayId: data.displayId?.trim() || undefined,
@@ -87,9 +87,25 @@ export async function POST(request: Request) {
         ],
       });
 
-      revalidateWorkspaceDashboard(workspaceId);
-      const item = txn.lines[0]?.inventoryItem;
-      return NextResponse.json(item ?? txn, { status: 201 });
+      const identity = normalizeIdentity({
+        itemType: "sealed",
+        cardId: data.cardId,
+        series: data.series,
+        rarity: data.rarity,
+        variant: data.variant,
+        language: data.language,
+      });
+      const item = await prisma.inventoryItem.findUnique({
+        where: {
+          workspaceId_itemType_cardId_series_rarity_variant_language: {
+            workspaceId,
+            ...identity,
+          },
+        },
+      });
+
+      revalidateWorkspaceDataTags(workspaceId);
+      return NextResponse.json(item, { status: 201 });
     }
 
     const identity = normalizeIdentity({
@@ -156,7 +172,7 @@ export async function POST(request: Request) {
       },
     });
 
-    revalidateWorkspaceDashboard(workspaceId);
+    revalidateWorkspaceDataTags(workspaceId);
     return NextResponse.json(item, { status: 201 });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Error";

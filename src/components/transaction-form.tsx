@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,9 +23,12 @@ async function autofillDisplayIdPrefix(value: string): Promise<string | null> {
 
 export function TransactionForm({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [displayId, setDisplayId] = useState("");
+  const [savedFlash, setSavedFlash] = useState<string | null>(null);
+  const [lineKey, setLineKey] = useState(0);
 
   const today = todayDisplayDate();
 
@@ -34,10 +37,17 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
     if (next) setDisplayId(next);
   }
 
+  function resetLineFields(savedDisplayId: string) {
+    setDisplayId(savedDisplayId);
+    setLineKey((k) => k + 1);
+    formRef.current?.querySelector<HTMLInputElement>('[name="cardName"]')?.focus();
+  }
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSavedFlash(null);
 
     const fd = new FormData(e.currentTarget);
     const displayIdValue = (fd.get("displayId") as string)?.trim();
@@ -81,9 +91,15 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
       return;
     }
 
-    const txn = await res.json();
-    router.push(compact ? "/transactions" : `/transactions/${txn.id}`);
-    router.refresh();
+    const txn = (await res.json()) as { id: string; displayId: string };
+
+    if (compact) {
+      setSavedFlash(`Saved ${txn.displayId}`);
+      resetLineFields(txn.displayId);
+      return;
+    }
+
+    router.push(`/transactions/${txn.id}`);
   }
 
   const displayIdField = (
@@ -107,6 +123,7 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
 
   return (
     <form
+      ref={formRef}
       onSubmit={onSubmit}
       className={`space-y-4 rounded-lg border border-border bg-surface p-6 ${compact ? "max-w-lg" : "max-w-xl"}`}
     >
@@ -146,89 +163,96 @@ export function TransactionForm({ compact = false }: { compact?: boolean }) {
       <hr className="border-border" />
       <p className="text-sm font-medium text-foreground">Line item</p>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div key={lineKey} className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="itemType">Item type</Label>
+            <Select id="itemType" name="itemType" defaultValue="card">
+              <option value="card">Card</option>
+              <option value="sealed">Sealed / case</option>
+              <option value="merchandise">Merchandise</option>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="language">Language</Label>
+            <Select id="language" name="language" defaultValue="JP">
+              <option value="JP">JP</option>
+              <option value="EN">EN</option>
+              <option value="OTHER">Other</option>
+            </Select>
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <Label htmlFor="itemType">Item type</Label>
-          <Select id="itemType" name="itemType" defaultValue="card">
-            <option value="card">Card</option>
-            <option value="sealed">Sealed / case</option>
-            <option value="merchandise">Merchandise</option>
-          </Select>
+          <Label htmlFor="cardName">Name</Label>
+          <Input id="cardName" name="cardName" required placeholder="Luffy Snakeman Manga" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="language">Language</Label>
-          <Select id="language" name="language" defaultValue="JP">
-            <option value="JP">JP</option>
-            <option value="EN">EN</option>
-            <option value="OTHER">Other</option>
-          </Select>
+          <Label htmlFor="cardId">Card ID</Label>
+          <Input id="cardId" name="cardId" required={!compact} placeholder="OP11-118" />
         </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="series">Series</Label>
+            <Input id="series" name="series" placeholder="OP11" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="rarity">Rarity</Label>
+            <Input id="rarity" name="rarity" placeholder="SEC*/AA" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="variant">Variant</Label>
+          <Input id="variant" name="variant" placeholder="manga, AA…" />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="quantity">Qty</Label>
+            <Input
+              id="quantity"
+              name="quantity"
+              type="number"
+              step="0.01"
+              min="0.01"
+              required
+              defaultValue={1}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="unitPrice">Unit price (SGD)</Label>
+            <Input id="unitPrice" name="unitPrice" type="number" step="0.01" min="0" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="owner">Owner</Label>
+            <Input id="owner" name="owner" />
+          </div>
+        </div>
+
+        {!compact ? (
+          <div className="space-y-2">
+            <Label htmlFor="notes">Transaction notes</Label>
+            <Textarea id="notes" name="notes" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="lineNotes">Notes</Label>
+            <Input id="lineNotes" name="lineNotes" />
+          </div>
+        )}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="cardName">Name</Label>
-        <Input id="cardName" name="cardName" required placeholder="Luffy Snakeman Manga" />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="cardId">Card ID</Label>
-        <Input id="cardId" name="cardId" required={!compact} placeholder="OP11-118" />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="series">Series</Label>
-          <Input id="series" name="series" placeholder="OP11" />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="rarity">Rarity</Label>
-          <Input id="rarity" name="rarity" placeholder="SEC*/AA" />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="variant">Variant</Label>
-        <Input id="variant" name="variant" placeholder="manga, AA…" />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <Label htmlFor="quantity">Qty</Label>
-          <Input
-            id="quantity"
-            name="quantity"
-            type="number"
-            step="0.01"
-            min="0.01"
-            required
-            defaultValue={1}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="unitPrice">Unit price (SGD)</Label>
-          <Input id="unitPrice" name="unitPrice" type="number" step="0.01" min="0" required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="owner">Owner</Label>
-          <Input id="owner" name="owner" />
-        </div>
-      </div>
-
-      {!compact ? (
-        <div className="space-y-2">
-          <Label htmlFor="notes">Transaction notes</Label>
-          <Textarea id="notes" name="notes" />
-        </div>
-      ) : (
-        <div className="space-y-2">
-          <Label htmlFor="lineNotes">Notes</Label>
-          <Input id="lineNotes" name="lineNotes" />
-        </div>
-      )}
-
+      {savedFlash ? (
+        <p className="text-sm font-medium text-success" role="status">
+          {savedFlash} — ready for next line
+        </p>
+      ) : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-        {loading ? "Saving…" : "Save transaction"}
+        {loading ? "Saving…" : compact ? "Save & next" : "Save transaction"}
       </Button>
     </form>
   );

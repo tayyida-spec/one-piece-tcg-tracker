@@ -12,4 +12,5 @@ export type CaseCrackResult = {
   cardsAdded: number;
   totalUnits: number;
   referenceTxn: string | null;
+  pricesUpdated: number;
 };
