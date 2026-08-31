@@ -1,5 +1,6 @@
-// Seeds initial workspace capital contributions ($5,000 total).
+// Seeds initial workspace capital ($2,000 ownership pool).
 // Idempotent: skips if workspace already has any capital entries.
+// For full reset use: node scripts/seed-capital-pool.mjs
 // Run with: node scripts/seed-capital-contributions.mjs
 import { PrismaClient } from "@prisma/client";
 
@@ -7,13 +8,13 @@ const prisma = new PrismaClient();
 
 const INVITE_CODE = process.env.WORKSPACE_INVITE_CODE ?? "three-hats-2026";
 
-/** Initial pump-in breakdown — total S$5,000 */
+/** S$2,000 total — ownership % split */
 const CONTRIBUTIONS = [
-  { contributor: "Ben", amount: 1050, notes: "Initial workspace capital" },
-  { contributor: "Caleb", amount: 1050, notes: "Initial workspace capital" },
-  { contributor: "Timmy", amount: 1000, notes: "Initial workspace capital" },
-  { contributor: "Yi Da", amount: 950, notes: "Initial workspace capital" },
-  { contributor: "Matt", amount: 950, notes: "Initial workspace capital" },
+  { contributor: "Ben", amount: 420, notes: "Ownership pool 21%" },
+  { contributor: "Caleb", amount: 420, notes: "Ownership pool 21%" },
+  { contributor: "Timmy", amount: 400, notes: "Ownership pool 20%" },
+  { contributor: "Matthew", amount: 380, notes: "Ownership pool 19%" },
+  { contributor: "Yi Da", amount: 380, notes: "Ownership pool 19%" },
 ];
 
 async function main() {

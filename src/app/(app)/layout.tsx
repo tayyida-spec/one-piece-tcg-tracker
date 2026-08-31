@@ -1,7 +1,19 @@
 import { redirect } from "next/navigation";
 import { AppNav } from "@/components/app-nav";
-import { AuthError, requireUser } from "@/lib/auth";
+import { isAuthError, requireUser } from "@/lib/auth";
 import { resolveUserDisplayName } from "@/lib/user-display";
+
+export const dynamic = "force-dynamic";
+
+function isNextRedirectError(e: unknown): boolean {
+  return (
+    typeof e === "object" &&
+    e !== null &&
+    "digest" in e &&
+    typeof (e as { digest: string }).digest === "string" &&
+    (e as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+  );
+}
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let membership;
@@ -11,9 +23,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     membership = auth.membership;
     userName = resolveUserDisplayName(auth.user, membership);
   } catch (e) {
-    if (e instanceof AuthError) {
+    if (isNextRedirectError(e)) {
+      throw e;
+    }
+    if (isAuthError(e)) {
       redirect("/login");
     }
+
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("[app-layout] requireUser failed:", message);
 
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -29,6 +47,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             If you see &quot;too many authentication failures&quot;, wait a few minutes for
             Supabase to unblock connections, then restart the dev server.
           </p>
+          {process.env.NODE_ENV === "development" ? (
+            <p className="mt-3 rounded-md bg-muted/20 p-2 font-mono text-xs text-danger break-all">
+              {message}
+            </p>
+          ) : null}
         </div>
       </div>
     );

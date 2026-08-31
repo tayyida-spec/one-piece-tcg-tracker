@@ -8,6 +8,8 @@
     "build": "prisma generate && next build",
     "db:bootstrap": "node scripts/apply-business-expense-migration.mjs && node scripts/apply-capital-migration.mjs && node scripts/apply-card-price-migration.mjs && node scripts/seed-business-expenses.mjs && node scripts/seed-capital-contributions.mjs",
     "seed:capital": "node scripts/seed-capital-contributions.mjs",
+    "seed:capital-pool": "node scripts/seed-capital-pool.mjs",
+    "seed:aug-sales": "node scripts/seed-aug-op17-sales.mjs",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",

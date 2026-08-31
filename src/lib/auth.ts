@@ -9,6 +9,10 @@ export class AuthError extends Error {
   }
 }
 
+export function isAuthError(e: unknown): e is AuthError {
+  return e instanceof AuthError || (e instanceof Error && e.name === "AuthError");
+}
+
 export const requireUser = cache(async function requireUser() {
   const user = await getSessionUser();
 
