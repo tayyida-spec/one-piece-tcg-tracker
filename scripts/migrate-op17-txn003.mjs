@@ -84,7 +84,7 @@ async function main() {
           workspaceId: workspace.id,
           displayId: NEW_DISPLAY_ID,
           importKey: buyImportKey,
-          batchLabel: BATCH_LABEL,
+          batchLabel: OP17_BATCH_LABEL,
           transactionType: "buy",
           date: BUY_DATE,
           currency: "SGD",

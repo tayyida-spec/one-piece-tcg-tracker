@@ -11,6 +11,7 @@ export type PlLineInput = {
   id: string;
   transactionId: string;
   displayId: string;
+  batchLabel?: string | null;
   cardName: string;
   transactionType: string;
   date: string;
@@ -104,6 +105,9 @@ export function deriveBatchSubtitle(
   displayId: string,
   groupLines: PlLineInput[]
 ): string | null {
+  const batchLabel = groupLines.find((l) => l.batchLabel?.trim())?.batchLabel?.trim();
+  if (batchLabel) return batchLabel;
+
   const cat = batchCategory(displayId);
   const buys = groupLines.filter((l) => l.transactionType.toLowerCase() === "buy");
   const sells = groupLines.filter((l) => l.transactionType.toLowerCase() === "sell");
@@ -447,19 +451,30 @@ export function sumBcUnrealized(
   };
 }
 
+function txnDisplayIdSortKey(displayId: string): number {
+  const match = /^TXN(\d+)$/i.exec(displayId.trim());
+  return match ? Number(match[1]) : 9999;
+}
+
+function compareDisplayIds(a: string, b: string): number {
+  const catA = batchCategory(a);
+  const catB = batchCategory(b);
+  const order = { txn: 0, bc: 1, other: 2 };
+  if (order[catA] !== order[catB]) return order[catA] - order[catB];
+  if (catA === "txn" && catB === "txn") {
+    const byNum = txnDisplayIdSortKey(a) - txnDisplayIdSortKey(b);
+    if (byNum !== 0) return byNum;
+  }
+  return a.localeCompare(b);
+}
+
 export function breakdownByDisplayId(
   lines: PlLineInput[],
   month?: string,
   inventoryById?: Map<string, PlInventoryInput>
 ): DisplayIdPlRow[] {
   const filtered = month ? lines.filter((l) => monthKey(l.date) === month) : lines;
-  const displayIds = [...new Set(filtered.map((l) => l.displayId))].sort((a, b) => {
-    const catA = batchCategory(a);
-    const catB = batchCategory(b);
-    const order = { txn: 0, bc: 1, other: 2 };
-    if (order[catA] !== order[catB]) return order[catA] - order[catB];
-    return a.localeCompare(b);
-  });
+  const displayIds = [...new Set(filtered.map((l) => l.displayId))].sort(compareDisplayIds);
 
   return displayIds.map((id) => batchPlForDisplayId(id, filtered, lines, inventoryById));
 }

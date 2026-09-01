@@ -77,6 +77,7 @@ async function loadDashboardPayload(workspaceId: string): Promise<DashboardPaylo
     id: line.id,
     transactionId: line.transactionId,
     displayId: line.transaction.displayId,
+    batchLabel: line.transaction.batchLabel,
     cardName: line.cardName,
     transactionType: line.transaction.transactionType,
     date: line.transaction.date.toISOString(),
