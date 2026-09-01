@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { normalizeIdentity } from "@/lib/inventory-identity";
 import { applyQuantityDelta } from "@/lib/inventory-service";
+import { marketPriceUpdateFields } from "@/lib/inventory-market-price";
 import type { z } from "zod";
 import type { caseCrackSchema } from "@/lib/validations";
 import type { CrackableCase } from "@/lib/case-crack-types";
@@ -65,50 +66,17 @@ function crackNote(referenceTxn: string | null | undefined, notes: string | null
   return bits.length > 0 ? bits.join(" — ") : null;
 }
 
-async function upsertYytPriceInTx(
+async function setInventoryMarketPriceInTx(
   tx: Prisma.TransactionClient,
-  workspaceId: string,
-  data: {
-    cardName: string;
-    cardId: string;
-    series?: string;
-    rarity?: string;
-    language?: string;
-    variant?: string;
-    yytPriceSgd: number;
-  }
+  itemId: string,
+  marketPriceSgd: number
 ) {
-  const cardId = data.cardId.trim() || data.cardName.trim();
-  const identity = normalizeIdentity({
-    itemType: "card",
-    cardId,
-    series: data.series,
-    rarity: data.rarity,
-    language: data.language,
-    variant: data.variant,
-  });
-
-  const now = new Date();
-
-  await tx.cardPriceEntry.upsert({
-    where: {
-      workspaceId_itemType_cardId_series_rarity_variant_language: {
-        workspaceId,
-        ...identity,
-      },
-    },
-    create: {
-      workspaceId,
-      ...identity,
-      cardName: data.cardName.trim(),
-      marketPriceSgd: data.yytPriceSgd,
-      priceUpdatedAt: now,
-      inventoryItemId: null,
-    },
-    update: {
-      cardName: data.cardName.trim(),
-      marketPriceSgd: data.yytPriceSgd,
-      priceUpdatedAt: now,
+  const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id: itemId } });
+  await tx.inventoryItem.update({
+    where: { id: itemId },
+    data: {
+      currentMarketPrice: marketPriceSgd,
+      ...marketPriceUpdateFields(item.currentMarketPrice, marketPriceSgd),
     },
   });
 }
@@ -203,7 +171,7 @@ export async function crackCase(workspaceId: string, input: CaseCrackInput) {
     }
 
     const added: { cardName: string; cardId: string; quantity: number }[] = [];
-    let pricesUpdated = 0;
+    let marketPricesUpdated = 0;
 
     for (const line of input.lines) {
       const lineNote = line.notes?.trim() || sharedNote;
@@ -219,21 +187,13 @@ export async function crackCase(workspaceId: string, input: CaseCrackInput) {
         notes: lineNote,
       });
 
-      const qty = Number(line.quantity);
-      await applyQuantityDelta(item.id, qty, tx);
-      added.push({ cardName: line.cardName, cardId, quantity: qty });
+      const lineQty = Number(line.quantity);
+      await applyQuantityDelta(item.id, lineQty, tx);
+      added.push({ cardName: line.cardName, cardId, quantity: lineQty });
 
-      if (line.yytPriceSgd != null && line.yytPriceSgd > 0) {
-        await upsertYytPriceInTx(tx, workspaceId, {
-          cardName: line.cardName,
-          cardId,
-          series: line.series,
-          rarity: line.rarity,
-          language: line.language,
-          variant: line.variant,
-          yytPriceSgd: line.yytPriceSgd,
-        });
-        pricesUpdated += 1;
+      if (line.marketPriceSgd != null && line.marketPriceSgd > 0) {
+        await setInventoryMarketPriceInTx(tx, item.id, line.marketPriceSgd);
+        marketPricesUpdated += 1;
       }
     }
 
@@ -242,7 +202,7 @@ export async function crackCase(workspaceId: string, input: CaseCrackInput) {
       cardsAdded: added.length,
       totalUnits: added.reduce((s, r) => s + r.quantity, 0),
       referenceTxn: input.referenceTxn?.trim().toUpperCase() ?? null,
-      pricesUpdated,
+      marketPricesUpdated,
     };
   });
 }

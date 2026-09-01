@@ -163,7 +163,7 @@ export const caseCrackLineSchema = z.object({
   language: z.string().default("JP"),
   quantity: z.coerce.number().positive().default(1),
   notes: z.string().optional().nullable(),
-  yytPriceSgd: z
+  marketPriceSgd: z
     .union([z.coerce.number().positive(), z.null()])
     .optional()
     .nullable(),

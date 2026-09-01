@@ -3,7 +3,6 @@ import "server-only";
 import { revalidatePath, revalidateTag } from "next/cache";
 import {
   capitalCacheTag,
-  cardPricesCacheTag,
   dashboardCacheTag,
   expensesCacheTag,
   inventoryCacheTag,
@@ -24,12 +23,6 @@ export function revalidateWorkspaceDashboard(workspaceId: string) {
   revalidatePath("/case-crack");
   revalidatePath("/transactions");
   revalidatePath("/dashboard");
-}
-
-/** Call after price list import or cleanup. */
-export function revalidateWorkspaceCardPrices(workspaceId: string) {
-  revalidateTag(cardPricesCacheTag(workspaceId));
-  revalidatePath("/card-prices");
 }
 
 /** Call after capital contribution changes (also refreshes the dashboard). */

@@ -5,7 +5,7 @@ export type CaseCrackPasteRow = {
   rarity: string;
   quantity: number;
   language: string;
-  yytPrice: string;
+  marketPrice: string;
 };
 
 /** Parse clipboard text (tab or comma separated) into crack rows. */
@@ -34,7 +34,7 @@ export function parseCaseCrackPaste(text: string): CaseCrackPasteRow[] {
       rarity: parts[3] ?? "",
       quantity,
       language: (parts[5] ?? "JP").toUpperCase() || "JP",
-      yytPrice: parts[6] ?? "",
+      marketPrice: parts[6] ?? "",
     });
   }
 
@@ -51,6 +51,6 @@ export function emptyCrackRow(): CaseCrackPasteRow & { variant: string; notes: s
     language: "JP",
     quantity: 1,
     notes: "",
-    yytPrice: "",
+    marketPrice: "",
   };
 }

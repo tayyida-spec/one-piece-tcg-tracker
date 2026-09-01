@@ -36,7 +36,7 @@ function rowsFromPaste(text: string): CrackRow[] {
       rarity: r.rarity,
       quantity: r.quantity,
       language: r.language,
-      yytPrice: r.yytPrice,
+      marketPrice: r.marketPrice,
     })
   );
 }
@@ -103,10 +103,10 @@ export function CaseCrackForm({ cases }: { cases: CrackableCase[] }) {
     const lines = rows
       .filter((r) => r.cardName.trim())
       .map((r) => {
-        const yytRaw = r.yytPrice.trim();
-        const yytPriceSgd =
-          yytRaw !== "" && Number.isFinite(Number(yytRaw)) && Number(yytRaw) > 0
-            ? Number(yytRaw)
+        const priceRaw = r.marketPrice.trim();
+        const marketPriceSgd =
+          priceRaw !== "" && Number.isFinite(Number(priceRaw)) && Number(priceRaw) > 0
+            ? Number(priceRaw)
             : null;
 
         return {
@@ -118,7 +118,7 @@ export function CaseCrackForm({ cases }: { cases: CrackableCase[] }) {
           language: r.language.trim() || "JP",
           quantity: Number(r.quantity) || 1,
           notes: r.notes.trim() || null,
-          yytPriceSgd,
+          marketPriceSgd,
         };
       });
 
@@ -148,7 +148,9 @@ export function CaseCrackForm({ cases }: { cases: CrackableCase[] }) {
       setSuccess(
         `Logged ${data.totalUnits} card(s) from ${data.caseName}` +
           (data.referenceTxn ? ` (${data.referenceTxn})` : "") +
-          (data.pricesUpdated > 0 ? ` — ${data.pricesUpdated} YYT price(s) saved` : "") +
+          (data.marketPricesUpdated > 0
+            ? ` — ${data.marketPricesUpdated} market price(s) saved`
+            : "") +
           ". Case stock reduced by 1."
       );
       setRows([makeRow(), makeRow(), makeRow()]);
@@ -203,7 +205,7 @@ export function CaseCrackForm({ cases }: { cases: CrackableCase[] }) {
       {selectedCase ? (
         <p className="text-sm text-muted">
           Opening <span className="font-medium text-foreground">{selectedCase.cardName}</span> —
-          pulls go to Inventory. Optional YYT price updates the Price list (SGD). Sell later via
+          pulls go to Inventory. Optional market price (SGD) updates Inventory. Sell later via
           Quick add under the same TXN.
         </p>
       ) : null}
@@ -239,7 +241,7 @@ export function CaseCrackForm({ cases }: { cases: CrackableCase[] }) {
         <div className="space-y-2 rounded-lg border border-border bg-surface-elevated p-4">
           <Label htmlFor="paste">Paste from spreadsheet</Label>
           <p className="text-xs text-muted">
-            One card per line: name, id, series, rarity, qty, lang, yyt price — separated by tab
+            One card per line: name, id, series, rarity, qty, lang, market price — separated by tab
             or comma.
           </p>
           <Textarea
@@ -271,7 +273,7 @@ export function CaseCrackForm({ cases }: { cases: CrackableCase[] }) {
               <th className="px-2 py-2">Variant</th>
               <th className="w-16 px-2 py-2 text-right">Qty</th>
               <th className="w-16 px-2 py-2">Lang</th>
-              <th className="min-w-[88px] px-2 py-2 text-right">YYT price</th>
+              <th className="min-w-[88px] px-2 py-2 text-right">Market</th>
               <th className="min-w-[100px] px-2 py-2">Notes</th>
               <th className="w-10 px-2 py-2" />
             </tr>
@@ -338,8 +340,8 @@ export function CaseCrackForm({ cases }: { cases: CrackableCase[] }) {
                     type="number"
                     min={0}
                     step={0.01}
-                    value={row.yytPrice}
-                    onChange={(e) => updateRow(row.key, "yytPrice", e.target.value)}
+                    value={row.marketPrice}
+                    onChange={(e) => updateRow(row.key, "marketPrice", e.target.value)}
                     className="h-8 w-24 text-right"
                     placeholder="SGD"
                   />
