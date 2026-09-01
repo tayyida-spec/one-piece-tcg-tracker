@@ -1,6 +1,6 @@
 /**
- * Reset workspace capital to $2,000 ownership pool + Matthew June catch-up.
- * Idempotent: removes prior rows tagged seed-capital-pool.
+ * Seed $2,000 ownership pool + Matthew June catch-up (additive; keeps prior pump-ins).
+ * Idempotent: removes only rows tagged seed-capital-pool, then re-inserts.
  * Usage: node scripts/seed-capital-pool.mjs
  */
 import { PrismaClient } from "@prisma/client";
@@ -40,9 +40,11 @@ async function main() {
   }
 
   const deleted = await prisma.capitalContribution.deleteMany({
-    where: { workspaceId: workspace.id },
+    where: { workspaceId: workspace.id, notes: { contains: SEED_TAG } },
   });
-  console.log(`Cleared ${deleted.count} existing capital contribution(s).`);
+  if (deleted.count > 0) {
+    console.log(`Removed ${deleted.count} prior row(s) tagged ${SEED_TAG}.`);
+  }
 
   const poolRows = OWNERSHIP_POOL.map((c) => ({
     workspaceId: workspace.id,
