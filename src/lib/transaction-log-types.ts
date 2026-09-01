@@ -2,7 +2,7 @@ import type { TransactionLogRow } from "@/components/transaction-log-table";
 
 export type TransactionLogPage = {
   rows: TransactionLogRow[];
-  total: number;
+  total?: number;
   limit: number;
   offset: number;
   hasMore: boolean;

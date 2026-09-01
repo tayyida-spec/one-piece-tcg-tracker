@@ -1,36 +1,31 @@
 /**
- * Seed $2,000 ownership pool + Matthew June catch-up (additive; keeps prior pump-ins).
- * Idempotent: removes only rows tagged seed-capital-pool, then re-inserts.
+ * Seed OP17 cases pump-in ($2,000) + Matthew June catch-up (additive; keeps prior pump-ins).
+ * Idempotent: removes prior OP17 pump-in rows, then re-inserts.
  * Usage: node scripts/seed-capital-pool.mjs
  */
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const SEED_TAG = "seed-capital-pool";
 const INVITE_CODE = process.env.WORKSPACE_INVITE_CODE ?? "three-hats-2026";
 
-/** $2,000 total workspace capital by ownership % */
-const OWNERSHIP_POOL = [
-  { contributor: "Ben", amount: 420, pct: "21%" },
-  { contributor: "Caleb", amount: 420, pct: "21%" },
-  { contributor: "Timmy", amount: 400, pct: "20%" },
-  { contributor: "Matthew", amount: 380, pct: "19%" },
-  { contributor: "Yi Da", amount: 380, pct: "19%" },
+const OP17_PUMP_IN = [
+  { contributor: "Ben", amount: 420 },
+  { contributor: "Caleb", amount: 420 },
+  { contributor: "Timmy", amount: 400 },
+  { contributor: "Matthew", amount: 380 },
+  { contributor: "Yi Da", amount: 380 },
 ];
 
-/**
- * June 10 2026 second pump-in: Ben/Caleb paid $1,575 (21% of $7,500).
- * Matthew missed his 19% share = $1,425.
- */
 const MATTHEW_CATCHUP = {
   contributor: "Matthew",
   amount: 1425,
   date: new Date("2026-08-31T00:00:00.000Z"),
-  notes: `${SEED_TAG} — Catch-up for 10 Jun 2026 second pump-in (19% of S$7,500 pool)`,
+  notes: "Catch-up for 10 Jun 2026 second pump-in",
 };
 
 const POOL_DATE = new Date("2026-08-31T00:00:00.000Z");
+const OP17_NOTE = "Op17 cases pump in";
 
 async function main() {
   const workspace = await prisma.workspace.findUnique({ where: { inviteCode: INVITE_CODE } });
@@ -40,30 +35,37 @@ async function main() {
   }
 
   const deleted = await prisma.capitalContribution.deleteMany({
-    where: { workspaceId: workspace.id, notes: { contains: SEED_TAG } },
+    where: {
+      workspaceId: workspace.id,
+      OR: [
+        { notes: OP17_NOTE, date: POOL_DATE },
+        { notes: MATTHEW_CATCHUP.notes, contributor: MATTHEW_CATCHUP.contributor, date: MATTHEW_CATCHUP.date },
+        { notes: { contains: "seed-capital-pool" } },
+      ],
+    },
   });
   if (deleted.count > 0) {
-    console.log(`Removed ${deleted.count} prior row(s) tagged ${SEED_TAG}.`);
+    console.log(`Removed ${deleted.count} prior OP17 pump-in row(s).`);
   }
 
-  const poolRows = OWNERSHIP_POOL.map((c) => ({
+  const poolRows = OP17_PUMP_IN.map((c) => ({
     workspaceId: workspace.id,
     date: POOL_DATE,
     amount: c.amount,
     contributor: c.contributor,
-    notes: `${SEED_TAG} — Ownership pool ${c.pct} (S$${c.amount} of S$2,000)`,
+    notes: OP17_NOTE,
   }));
 
   await prisma.capitalContribution.createMany({
     data: [...poolRows, { workspaceId: workspace.id, ...MATTHEW_CATCHUP }],
   });
 
-  const poolTotal = OWNERSHIP_POOL.reduce((s, c) => s + c.amount, 0);
+  const poolTotal = OP17_PUMP_IN.reduce((s, c) => s + c.amount, 0);
   const grandTotal = poolTotal + MATTHEW_CATCHUP.amount;
 
-  console.log("\nOwnership pool (S$2,000):");
-  for (const c of OWNERSHIP_POOL) {
-    console.log(`  ${c.contributor}: S$${c.amount.toFixed(2)} (${c.pct})`);
+  console.log("\nOP17 cases pump in (S$2,000):");
+  for (const c of OP17_PUMP_IN) {
+    console.log(`  ${c.contributor}: S$${c.amount.toFixed(2)}`);
   }
   console.log(`\nMatthew catch-up: S$${MATTHEW_CATCHUP.amount.toFixed(2)}`);
   console.log(`Total pumped-in capital: S$${grandTotal.toFixed(2)}`);

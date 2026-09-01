@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +52,6 @@ export function TransactionLogTable({
   rows: TransactionLogRow[];
   onMutated?: () => void | Promise<void>;
 }) {
-  const router = useRouter();
   const [editing, setEditing] = useState<TransactionLogRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -227,7 +225,6 @@ export function TransactionLogTable({
 
     setEditing(null);
     await onMutated?.();
-    router.refresh();
   }
 
   async function onDelete(row: TransactionLogRow) {
@@ -236,7 +233,6 @@ export function TransactionLogTable({
     if (res.ok) {
       setEditing(null);
       await onMutated?.();
-      router.refresh();
     }
   }
 

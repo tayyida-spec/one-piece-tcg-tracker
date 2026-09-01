@@ -22,7 +22,7 @@ function monthLabel(key: string) {
 
 export function TransactionLogPanel({ initialPage, months }: Props) {
   const [rows, setRows] = useState<TransactionLogRow[]>(initialPage.rows);
-  const [total, setTotal] = useState(initialPage.total);
+  const [total, setTotal] = useState(initialPage.total ?? initialPage.rows.length);
   const [hasMore, setHasMore] = useState(initialPage.hasMore);
   const [month, setMonth] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -41,7 +41,7 @@ export function TransactionLogPanel({ initialPage, months }: Props) {
     const data = (await res.json()) as TransactionLogPage;
 
     setRows((prev) => (opts.append ? [...prev, ...data.rows] : data.rows));
-    setTotal(data.total);
+    if (data.total != null) setTotal(data.total);
     setHasMore(data.hasMore);
   }, [initialPage.limit]);
 

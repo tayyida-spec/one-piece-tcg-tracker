@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { matchesColumnFilter } from "@/lib/column-filter";
 
 export function useColumnFilters<T>(
@@ -13,8 +13,12 @@ export function useColumnFilters<T>(
 } {
   const [filters, setFilters] = useState<string[]>(() => accessors.map(() => ""));
 
-  const filteredRows = rows.filter((row) =>
-    accessors.every((accessor, i) => matchesColumnFilter(accessor(row), filters[i] ?? ""))
+  const filteredRows = useMemo(
+    () =>
+      rows.filter((row) =>
+        accessors.every((accessor, i) => matchesColumnFilter(accessor(row), filters[i] ?? ""))
+      ),
+    [rows, filters, accessors]
   );
 
   const hasActiveFilters = filters.some((f) => f.trim().length > 0);

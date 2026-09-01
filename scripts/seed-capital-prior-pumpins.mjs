@@ -13,24 +13,19 @@ const INVITE_CODE = process.env.WORKSPACE_INVITE_CODE ?? "three-hats-2026";
 const INITIAL_DATE = new Date("2026-01-01T00:00:00.000Z");
 const SECOND_PUMP_DATE = new Date("2026-06-10T00:00:00.000Z");
 
-/** First pump-in — S$5,025 total (Matthew S$975 per DB before Aug 2026 reset). */
 const INITIAL_PUMPINS = [
-  { contributor: "Ben", amount: 1050, notes: `${SEED_TAG} — Initial workspace capital` },
-  { contributor: "Caleb", amount: 1050, notes: `${SEED_TAG} — Initial workspace capital` },
-  { contributor: "Timmy", amount: 1000, notes: `${SEED_TAG} — Initial workspace capital` },
-  { contributor: "Yi Da", amount: 950, notes: `${SEED_TAG} — Initial workspace capital` },
-  { contributor: "Matthew", amount: 975, notes: `${SEED_TAG} — Initial workspace capital` },
+  { contributor: "Ben", amount: 1050, notes: "Initial workspace capital" },
+  { contributor: "Caleb", amount: 1050, notes: "Initial workspace capital" },
+  { contributor: "Timmy", amount: 1000, notes: "Initial workspace capital" },
+  { contributor: "Yi Da", amount: 950, notes: "Initial workspace capital" },
+  { contributor: "Matthew", amount: 975, notes: "Initial workspace capital" },
 ];
 
-/**
- * Second pump-in (10 Jun 2026) — S$7,500 pool by ownership %.
- * Matthew had not paid his 19% (S$1,425) at the time these were recorded.
- */
 const SECOND_PUMPINS = [
-  { contributor: "Ben", amount: 1575, pct: "21%", notes: `${SEED_TAG} — Second pump-in 21% (S$1,575 of S$7,500)` },
-  { contributor: "Caleb", amount: 1575, pct: "21%", notes: `${SEED_TAG} — Second pump-in 21% (S$1,575 of S$7,500)` },
-  { contributor: "Timmy", amount: 1500, pct: "20%", notes: `${SEED_TAG} — Second pump-in 20% (S$1,500 of S$7,500)` },
-  { contributor: "Yi Da", amount: 1425, pct: "19%", notes: `${SEED_TAG} — Second pump-in 19% (S$1,425 of S$7,500)` },
+  { contributor: "Ben", amount: 1575, notes: "Second pump-in" },
+  { contributor: "Caleb", amount: 1575, notes: "Second pump-in" },
+  { contributor: "Timmy", amount: 1500, notes: "Second pump-in" },
+  { contributor: "Yi Da", amount: 1425, notes: "Second pump-in" },
 ];
 
 async function main() {
@@ -41,10 +36,17 @@ async function main() {
   }
 
   const deleted = await prisma.capitalContribution.deleteMany({
-    where: { workspaceId: workspace.id, notes: { contains: SEED_TAG } },
+    where: {
+      workspaceId: workspace.id,
+      OR: [
+        { notes: { contains: SEED_TAG } },
+        { notes: "Initial workspace capital", date: INITIAL_DATE },
+        { notes: "Second pump-in", date: SECOND_PUMP_DATE },
+      ],
+    },
   });
   if (deleted.count > 0) {
-    console.log(`Removed ${deleted.count} prior seeded row(s) tagged ${SEED_TAG}.`);
+    console.log(`Removed ${deleted.count} prior seeded row(s).`);
   }
 
   const rows = [

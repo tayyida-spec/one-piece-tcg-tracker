@@ -8,7 +8,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const SEED_TAG = "seed-aug-op17-sales";
-const DISPLAY_ID = "BC007";
+const DISPLAY_ID = "TXN003";
 const BATCH_LABEL = "OP17 Aug 2026";
 
 function dateUtc(y, m, d) {

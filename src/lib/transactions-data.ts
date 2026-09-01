@@ -211,50 +211,34 @@ export async function loadTransactionLogPage(
 
 
 
-  const [lines, total] = await Promise.all([
+  const lines = await prisma.transactionLine.findMany({
+    where,
+    orderBy: [
+      { transaction: { date: "desc" } },
+      { transaction: { displayId: "asc" } },
+      { cardName: "asc" },
+    ],
+    skip: offset,
+    take: limit,
+    select: lineSelect,
+  });
 
-    prisma.transactionLine.findMany({
+  const total =
+    offset === 0
+      ? await prisma.transactionLine.count({ where })
+      : undefined;
 
-      where,
-
-      orderBy: [
-
-        { transaction: { date: "desc" } },
-
-        { transaction: { displayId: "asc" } },
-
-        { cardName: "asc" },
-
-      ],
-
-      skip: offset,
-
-      take: limit,
-
-      select: lineSelect,
-
-    }),
-
-    prisma.transactionLine.count({ where }),
-
-  ]);
-
-
+  const rowCount = lines.length;
+  const hasMore =
+    total != null ? offset + rowCount < total : rowCount === limit;
 
   return {
-
     rows: lines.map(mapLine),
-
-    total,
-
+    ...(total != null ? { total } : {}),
     limit,
-
     offset,
-
-    hasMore: offset + lines.length < total,
-
+    hasMore,
     month: opts.month ?? null,
-
   };
 
 }
@@ -262,29 +246,14 @@ export async function loadTransactionLogPage(
 
 
 export async function loadTransactionLogMonths(workspaceId: string): Promise<string[]> {
-
-  const rows = await prisma.transaction.findMany({
-
-    where: { workspaceId, transactionType: { in: [...TRANSACTION_LOG_TYPES] } },
-
-    select: { date: true },
-
-    orderBy: { date: "desc" },
-
-  });
-
-  const months = new Set<string>();
-
-  for (const row of rows) {
-
-    const d = row.date;
-
-    months.add(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
-
-  }
-
-  return [...months].sort((a, b) => b.localeCompare(a));
-
+  const rows = await prisma.$queryRaw<{ month: string }[]>`
+    SELECT DISTINCT to_char(date AT TIME ZONE 'UTC', 'YYYY-MM') AS month
+    FROM "Transaction"
+    WHERE "workspaceId" = ${workspaceId}
+      AND "transactionType" IN ('buy', 'sell')
+    ORDER BY month DESC
+  `;
+  return rows.map((r) => r.month);
 }
 
 

@@ -85,6 +85,7 @@ model Transaction {
   @@unique([workspaceId, importKey])
   @@index([workspaceId, displayId])
   @@index([workspaceId, date])
+  @@index([workspaceId, transactionType, date(sort: Desc)])
 }
 
 model TransactionLine {

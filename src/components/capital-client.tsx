@@ -11,7 +11,7 @@ import { SectionHeading } from "@/components/page-heading";
 import { formatDate, formatMoney } from "@/lib/utils";
 import { isoToDisplayDate, todayDisplayDate } from "@/lib/date-format";
 import type { CapitalContributionRow } from "@/lib/capital-types";
-import { getEnvCapitalFallback } from "@/lib/capital-constants";
+import { getEnvCapitalFallback, CAPITAL_OWNERSHIP_SPLIT_NOTE } from "@/lib/capital-constants";
 
 type FormState = {
   date: string;
@@ -136,7 +136,8 @@ export function CapitalClient({
         <p className="mt-1 font-display text-2xl font-semibold text-foreground">
           {formatMoney(totalCapital)}
         </p>
-        <p className="mt-1 text-xs text-muted">
+        <p className="mt-1 text-xs text-muted">{CAPITAL_OWNERSHIP_SPLIT_NOTE}</p>
+        <p className="mt-2 text-xs text-muted">
           Used for Remaining capital on the dashboard
           {usingEnvFallback
             ? ` · env fallback ${formatMoney(getEnvCapitalFallback())} until contributions are logged`

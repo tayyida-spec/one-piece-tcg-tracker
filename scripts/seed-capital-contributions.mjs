@@ -1,4 +1,4 @@
-// Seeds initial workspace capital ($2,000 ownership pool).
+// Seeds initial workspace capital ($2,000 OP17 cases pump-in).
 // Idempotent: skips if workspace already has any capital entries.
 // For full reset use: node scripts/seed-capital-pool.mjs
 // Run with: node scripts/seed-capital-contributions.mjs
@@ -8,14 +8,15 @@ const prisma = new PrismaClient();
 
 const INVITE_CODE = process.env.WORKSPACE_INVITE_CODE ?? "three-hats-2026";
 
-/** S$2,000 total — ownership % split */
 const CONTRIBUTIONS = [
-  { contributor: "Ben", amount: 420, notes: "Ownership pool 21%" },
-  { contributor: "Caleb", amount: 420, notes: "Ownership pool 21%" },
-  { contributor: "Timmy", amount: 400, notes: "Ownership pool 20%" },
-  { contributor: "Matthew", amount: 380, notes: "Ownership pool 19%" },
-  { contributor: "Yi Da", amount: 380, notes: "Ownership pool 19%" },
+  { contributor: "Ben", amount: 420 },
+  { contributor: "Caleb", amount: 420 },
+  { contributor: "Timmy", amount: 400 },
+  { contributor: "Matthew", amount: 380 },
+  { contributor: "Yi Da", amount: 380 },
 ];
+
+const OP17_NOTE = "Op17 cases pump in";
 
 async function main() {
   const workspace = await prisma.workspace.findUnique({ where: { inviteCode: INVITE_CODE } });
@@ -40,7 +41,7 @@ async function main() {
       date: seedDate,
       amount: c.amount,
       contributor: c.contributor,
-      notes: c.notes,
+      notes: OP17_NOTE,
     })),
   });
 
