@@ -11,6 +11,7 @@
     "seed:capital-prior": "node scripts/seed-capital-prior-pumpins.mjs",
     "seed:capital-pool": "node scripts/seed-capital-pool.mjs",
     "seed:aug-sales": "node scripts/seed-aug-op17-sales.mjs",
+    "seed:oct-sales": "node scripts/seed-oct-op16-op17-sales.mjs",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
